@@ -6,7 +6,7 @@ import {
   ArrowLeft, Mail, Phone, Building2, BriefcaseBusiness, UserCog, CalendarDays, Link2,
   RefreshCw, Ban, Clock, Send, CheckCircle2, XCircle, CircleDot, Circle, AlertCircle,
   FileText, Download, MessageSquarePlus, Eye, ShieldCheck, GraduationCap, ClipboardCheck, BookOpen,
-  KeyRound,
+  KeyRound, Pencil, UserX, UserCheck, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,16 @@ import { OnboardingStatusBadge, StepStatusBadge, DocStatusBadge } from "@/compon
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatDate, formatDateTime, timeAgo, cn } from "@/lib/utils";
 import { SECTION_LABELS, type StepSection, type StepStatus, type OnboardingStatus, type DocStatus } from "@/types";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { regenerateToken, revokeToken, setTokenExpiry, sendInvitation } from "@/actions/tokens";
 import { approveDocument, rejectDocument } from "@/actions/documents-admin";
+import { assignPolicyToEmployee } from "@/actions/policies";
+import { updateEmployee, endTenure, reactivateEmployee } from "@/actions/employees";
 import { saveReview } from "@/actions/reviews";
 import { addNote } from "@/actions/notes";
-import { issueOfferLetter, revokeOfferLetter } from "@/actions/offer";
+import { issueOfferLetter, revokeOfferLetter, uploadOfferLetter } from "@/actions/offer";
 import { setEmployeePortalPassword } from "@/actions/employee-access";
 
 export interface EmployeeDetail {
@@ -39,6 +44,9 @@ export interface EmployeeDetail {
     department: string; role: string; reportingManagerName: string; joiningDate: string;
     employmentType: string; workMode: string; profile: Record<string, unknown>;
     passwordSetAt: string | null;
+    employmentStatus: "active" | "archived" | "past";
+    tenureEndedAt: string | null;
+    tenureEndReason: string;
   };
   instance: {
     _id: string; status: OnboardingStatus; progress: number;
@@ -65,8 +73,9 @@ export interface EmployeeDetail {
     status: "issued" | "accepted" | "revoked";
     ctcAnnual: number; currency: string; location: string; offerDate: string;
     responseByDate: string | null; issuedByName: string; acceptedAt: string | null;
-    fileId: string; terms: string[];
+    fileId: string; fileName: string; source: "generated" | "uploaded"; terms: string[];
   } | null;
+  policies: { _id: string; title: string; category: string }[];
 }
 
 const SECTION_SEQUENCE: StepSection[] = ["CORE", "ROLE", "DOCUMENTS", "POLICIES", "TRAINING", "ASSESSMENT", "FINAL"];
@@ -74,9 +83,24 @@ const SECTION_SEQUENCE: StepSection[] = ["CORE", "ROLE", "DOCUMENTS", "POLICIES"
 export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
   const { employee, instance, link } = detail;
 
+  const isPast = employee.employmentStatus === "past";
+
   return (
     <div className="space-y-5">
       <Button asChild variant="ghost" size="sm" className="-ml-2"><Link href="/employees"><ArrowLeft /> Employees</Link></Button>
+
+      {isPast && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+          <UserX className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Former employee — tenure ended{employee.tenureEndedAt ? ` on ${formatDate(employee.tenureEndedAt)}` : ""}.</p>
+            <p className="text-xs opacity-90">
+              Portal access is revoked and no further onboarding updates are emailed to them.
+              {employee.tenureEndReason ? ` Reason: ${employee.tenureEndReason}` : ""}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <Card>
@@ -88,6 +112,7 @@ export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-semibold tracking-tight">{employee.fullName}</h1>
                   {instance && <OnboardingStatusBadge status={instance.status} />}
+                  <EditEmployeeButton employeeId={employee._id} fullName={employee.fullName} email={employee.email} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5"><BriefcaseBusiness className="h-3.5 w-3.5" /> {employee.role}</span>
@@ -138,13 +163,77 @@ export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
           <div className="space-y-5">
             <LinkManager instanceId={instance._id} link={link} invitationSentAt={instance.invitationSentAt} />
             <PortalAccessCard employeeId={employee._id} email={employee.email} passwordSetAt={employee.passwordSetAt} />
+            <AssignPolicyCard employeeId={employee._id} policies={detail.policies} />
             <PreboardingCard detail={detail} />
+            <EmploymentCard employee={employee} />
           </div>
         </div>
       ) : (
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No onboarding instance found for this employee.</CardContent></Card>
       )}
     </div>
+  );
+}
+
+/* ------------------------------ Edit details ----------------------------- */
+
+function EditEmployeeButton({ employeeId, fullName, email }: { employeeId: string; fullName: string; email: string }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [name, setName] = React.useState(fullName);
+  const [mail, setMail] = React.useState(email);
+  const [pending, start] = React.useTransition();
+
+  React.useEffect(() => { if (open) { setName(fullName); setMail(email); } }, [open, fullName, email]);
+
+  function save() {
+    start(async () => {
+      const res = await updateEmployee(employeeId, { fullName: name, email: mail });
+      if (res.ok) { toast.success(res.message); setOpen(false); router.refresh(); }
+      else toast.error(res.error);
+    });
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+        onClick={() => setOpen(true)} aria-label="Edit employee name"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit employee</DialogTitle>
+            <DialogDescription>Update the employee&apos;s name and login email.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Full name</Label>
+              <Input
+                id="edit-name" value={name} onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") save(); }} autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-email">Login email</Label>
+              <Input
+                id="edit-email" type="email" value={mail} onChange={(e) => setMail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+              />
+              <p className="text-[11px] text-muted-foreground">Used to sign in to the portal and to receive onboarding emails.</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+              <Button variant="brand" onClick={save} disabled={pending || name.trim().length < 2 || !mail.trim()}>
+                {pending ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -189,7 +278,8 @@ function LinkManager({
   function invite() {
     start(async () => {
       const res = await sendInvitation(instanceId);
-      if (res.ok) { toast.success(res.message); router.refresh(); } else toast.error(res.error);
+      if (res.ok) { if (res.data) setFreshUrl(res.data.url); toast.success(res.message); router.refresh(); }
+      else toast.error(res.error);
     });
   }
   function saveExpiry() {
@@ -328,7 +418,7 @@ function PortalAccessCard({
                   <CopyButton value={result} iconOnly />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Share it securely with the employee — it can&apos;t be shown again.</p>
+              <p className="text-xs text-muted-foreground">This password was also emailed to the employee. It can&apos;t be shown here again.</p>
               <div className="flex justify-end"><Button variant="brand" onClick={close}>Done</Button></div>
             </div>
           ) : (
@@ -345,6 +435,60 @@ function PortalAccessCard({
           )}
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+/* ----------------------------- Assign policy ----------------------------- */
+
+function AssignPolicyCard({
+  employeeId, policies,
+}: {
+  employeeId: string;
+  policies: EmployeeDetail["policies"];
+}) {
+  const router = useRouter();
+  const [policyId, setPolicyId] = React.useState("");
+  const [pending, start] = React.useTransition();
+
+  function assign() {
+    if (!policyId) return;
+    start(async () => {
+      const res = await assignPolicyToEmployee(employeeId, policyId);
+      if (res.ok) { toast.success(res.message); setPolicyId(""); router.refresh(); }
+      else toast.error(res.error);
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4" /> Assign a policy</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-xs text-muted-foreground">
+          Add a published policy for this employee to review and sign. They&apos;ll be emailed automatically.
+        </p>
+        {policies.length === 0 ? (
+          <p className="rounded-md bg-muted/50 px-2.5 py-2 text-[11px] text-muted-foreground">
+            No published policies yet. Publish one from the Policies page first.
+          </p>
+        ) : (
+          <>
+            <Select value={policyId} onValueChange={setPolicyId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Select a policy…" /></SelectTrigger>
+              <SelectContent>
+                {policies.map((p) => (
+                  <SelectItem key={p._id} value={p._id}>{p.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" className="w-full" onClick={assign} disabled={pending || !policyId}>
+              <Send className="h-3.5 w-3.5" /> {pending ? "Assigning…" : "Assign & notify"}
+            </Button>
+          </>
+        )}
+      </CardContent>
     </Card>
   );
 }
@@ -376,6 +520,91 @@ function PreboardingCard({ detail }: { detail: EmployeeDetail }) {
           ))}
         </ol>
       </CardContent>
+    </Card>
+  );
+}
+
+/* ------------------------------ Employment ------------------------------- */
+
+function EmploymentCard({ employee }: { employee: EmployeeDetail["employee"] }) {
+  const router = useRouter();
+  const [confirmEnd, setConfirmEnd] = React.useState(false);
+  const [reason, setReason] = React.useState("");
+  const [pending, start] = React.useTransition();
+  const isPast = employee.employmentStatus === "past";
+
+  function end() {
+    start(async () => {
+      const res = await endTenure(employee._id, { reason });
+      if (res.ok) { toast.success(res.message); setConfirmEnd(false); setReason(""); router.refresh(); }
+      else toast.error(res.error);
+    });
+  }
+  function reactivate() {
+    start(async () => {
+      const res = await reactivateEmployee(employee._id);
+      if (res.ok) { toast.success(res.message); router.refresh(); } else toast.error(res.error);
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {isPast ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />} Employment
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <dl className="space-y-1.5 text-xs">
+          <Row label="Status" value={isPast ? "Former employee" : "Active"} />
+          {isPast && <Row label="Tenure ended" value={employee.tenureEndedAt ? formatDate(employee.tenureEndedAt) : "—"} />}
+        </dl>
+        {isPast ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              This employee is in the past-employees list. They receive no onboarding update emails and can&apos;t access the portal.
+            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={reactivate} disabled={pending}>
+              <RotateCcw className="h-3.5 w-3.5" /> {pending ? "Reactivating…" : "Reactivate employee"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Ending the tenure revokes portal access, stops all onboarding update emails, and moves this record to past employees.
+            </p>
+            <Button
+              variant="outline" size="sm"
+              className="w-full text-destructive hover:text-destructive"
+              onClick={() => setConfirmEnd(true)} disabled={pending}
+            >
+              <UserX className="h-3.5 w-3.5" /> End tenure
+            </Button>
+          </>
+        )}
+      </CardContent>
+
+      <Dialog open={confirmEnd} onOpenChange={(v) => (v ? setConfirmEnd(true) : setConfirmEnd(false))}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>End {employee.fullName}&apos;s tenure?</DialogTitle>
+            <DialogDescription>
+              They&apos;ll be moved to past employees. Portal access is revoked and no further update emails are sent. You can reactivate them later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="tenure-reason">Reason (optional)</Label>
+            <Textarea
+              id="tenure-reason" value={reason} onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Contract ended, resigned, offboarded." className="min-h-20"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmEnd(false)} disabled={pending}>Cancel</Button>
+            <Button variant="destructive" onClick={end} disabled={pending}>{pending ? "Ending…" : "End tenure"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -720,6 +949,17 @@ function OfferTab({ detail }: { detail: EmployeeDetail }) {
     });
   }
 
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  function upload(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    start(async () => {
+      const res = await uploadOfferLetter(detail.employee._id, fd);
+      if (res.ok) { toast.success(res.message); setEditing(false); router.refresh(); } else toast.error(res.error);
+      if (fileRef.current) fileRef.current.value = "";
+    });
+  }
+
   return (
     <div className="space-y-4">
       {offer && (
@@ -728,21 +968,31 @@ function OfferTab({ detail }: { detail: EmployeeDetail }) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-semibold">Offer letter</p>
-                <p className="text-xs text-muted-foreground">Issued by {offer.issuedByName || "—"} · {formatDate(offer.offerDate)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {offer.source === "uploaded" ? "Uploaded" : "Issued"} by {offer.issuedByName || "—"} · {formatDate(offer.offerDate)}
+                </p>
               </div>
               <Badge variant={offer.status === "accepted" ? "success" : offer.status === "revoked" ? "destructive" : "brand"}>
                 {offer.status === "accepted" ? `Accepted ${offer.acceptedAt ? formatDate(offer.acceptedAt) : ""}` : offer.status === "revoked" ? "Revoked" : "Issued"}
               </Badge>
             </div>
-            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-              <Info icon={FileText} label="Annual CTC" value={fmtMoney(offer.ctcAnnual, offer.currency)} />
-              <Info icon={Building2} label="Location" value={offer.location || "—"} />
-              {offer.responseByDate && <Info icon={CalendarDays} label="Respond by" value={formatDate(offer.responseByDate)} />}
-            </div>
-            {offer.terms.length > 0 && (
-              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                {offer.terms.map((t, i) => <li key={i}>{t}</li>)}
-              </ul>
+            {offer.source === "uploaded" ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-4 w-4" /> Admin-uploaded PDF{offer.fileName ? ` · ${offer.fileName}` : ""}
+              </p>
+            ) : (
+              <>
+                <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  <Info icon={FileText} label="Annual CTC" value={fmtMoney(offer.ctcAnnual, offer.currency)} />
+                  <Info icon={Building2} label="Location" value={offer.location || "—"} />
+                  {offer.responseByDate && <Info icon={CalendarDays} label="Respond by" value={formatDate(offer.responseByDate)} />}
+                </div>
+                {offer.terms.length > 0 && (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {offer.terms.map((t, i) => <li key={i}>{t}</li>)}
+                  </ul>
+                )}
+              </>
             )}
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm"><a href={`/api/files/${offer.fileId}`} target="_blank" rel="noreferrer"><Download className="h-3.5 w-3.5" /> Download PDF</a></Button>
@@ -788,6 +1038,26 @@ function OfferTab({ detail }: { detail: EmployeeDetail }) {
               <Button variant="brand" onClick={issue} disabled={pending || !ctc}>
                 {pending ? "Generating…" : offer ? "Re-generate & re-issue" : "Generate & issue offer letter"}
               </Button>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or upload a signed PDF</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Upload offer letter (PDF)</Label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                disabled={pending}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-brand/90 disabled:opacity-60"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Uploading replaces any existing offer and makes the PDF available to the employee immediately. Max {10} MB.
+              </p>
             </div>
           </CardContent>
         </Card>

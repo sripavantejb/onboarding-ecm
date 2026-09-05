@@ -19,6 +19,9 @@ export interface IOfferLetter {
   responseByDate?: Date | null;
   terms: string[];
   fileId: mongoose.Types.ObjectId; // GridFS PDF
+  fileName: string;
+  // "generated" = built from the form via PDFKit; "uploaded" = admin-supplied PDF.
+  source: "generated" | "uploaded";
   issuedByName: string;
   status: "issued" | "accepted" | "revoked";
   acceptedAt?: Date | null;
@@ -44,6 +47,8 @@ const OfferLetterSchema = new Schema<IOfferLetter>(
     responseByDate: { type: Date, default: null },
     terms: { type: [String], default: [] },
     fileId: { type: Schema.Types.ObjectId, required: true },
+    fileName: { type: String, default: "" },
+    source: { type: String, enum: ["generated", "uploaded"], default: "generated" },
     issuedByName: { type: String, default: "" },
     status: { type: String, enum: ["issued", "accepted", "revoked"], default: "issued" },
     acceptedAt: { type: Date, default: null },

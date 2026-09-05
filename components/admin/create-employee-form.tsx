@@ -310,12 +310,17 @@ function Stat({ label, value }: { label: string; value: number }) {
 function SuccessScreen({ data, onViewEmployee }: { data: SuccessData; onViewEmployee: () => void }) {
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState(false);
+  // Sending the invite rotates the link + resets the password, so track the
+  // fresh link and stop showing the now-stale credentials once emailed.
+  const [emailedUrl, setEmailedUrl] = React.useState<string | null>(null);
+  const displayUrl = emailedUrl ?? data.url;
 
   async function invite() {
     setSending(true);
     const res = await sendInvitation(data.instanceId);
     setSending(false);
-    if (res.ok) { toast.success(res.message); setSent(true); } else toast.error(res.error);
+    if (res.ok) { if (res.data) setEmailedUrl(res.data.url); toast.success(res.message); setSent(true); }
+    else toast.error(res.error);
   }
 
   return (
@@ -340,8 +345,8 @@ function SuccessScreen({ data, onViewEmployee }: { data: SuccessData; onViewEmpl
           <div className="space-y-2 text-left">
             <Label className="text-xs text-muted-foreground">Secure onboarding link</Label>
             <div className="flex items-center gap-2">
-              <Input readOnly value={data.url} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
-              <CopyButton value={data.url} iconOnly />
+              <Input readOnly value={displayUrl} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <CopyButton value={displayUrl} iconOnly />
             </div>
             <p className="text-xs text-muted-foreground">This link is unique, expires in 14 days, and can be revoked anytime.</p>
           </div>
@@ -368,17 +373,19 @@ function SuccessScreen({ data, onViewEmployee }: { data: SuccessData; onViewEmpl
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Share these securely with {data.name.split(" ")[0]}. The password is shown only once — you can reset it anytime from the employee page.
+              {sent
+                ? `A fresh link and a new password were emailed to ${data.email}. The credentials above are no longer valid.`
+                : `Share these securely with ${data.name.split(" ")[0]}, or click Send Invitation to email them a fresh link and password automatically.`}
             </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <CopyButton value={data.url} label="Copy Onboarding Link" className="flex-1" variant="outline" />
+            <CopyButton value={displayUrl} label="Copy Onboarding Link" className="flex-1" variant="outline" />
             <Button variant="outline" className="flex-1" onClick={invite} disabled={sending || sent}>
               <Send /> {sent ? "Invitation sent" : sending ? "Sending…" : "Send Invitation"}
             </Button>
             <Button asChild variant="brand" className="flex-1">
-              <a href={data.url} target="_blank" rel="noreferrer"><ExternalLink /> Open Portal</a>
+              <a href={displayUrl} target="_blank" rel="noreferrer"><ExternalLink /> Open Portal</a>
             </Button>
           </div>
           <button onClick={onViewEmployee} className="text-sm text-brand hover:underline">

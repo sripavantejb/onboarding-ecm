@@ -32,9 +32,15 @@ export default async function EmployeesPage({
   const departmentFilter = (sp.department as string) ?? "all";
   const statusFilter = (sp.status as string) ?? "all";
   const sort = (sp.sort as string) ?? "recent";
+  const view = (sp.view as string) === "past" ? "past" : "active";
   const page = Math.max(1, parseInt((sp.page as string) ?? "1", 10) || 1);
 
-  const query: Record<string, unknown> = { status: "active" };
+  const [activeCount, pastCount] = await Promise.all([
+    Employee.countDocuments({ status: "active" }),
+    Employee.countDocuments({ status: "past" }),
+  ]);
+
+  const query: Record<string, unknown> = { status: view };
   if (departmentFilter !== "all") query.department = departmentFilter;
   if (q) {
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -65,6 +71,7 @@ export default async function EmployeesPage({
     status: OnboardingStatus;
     lastActivity: string;
     createdAt: string;
+    tenureEndedAt: string | null;
   };
 
   let rows: Row[] = employees.map((e) => ({
@@ -79,6 +86,7 @@ export default async function EmployeesPage({
     status: ((e.instance as { status?: OnboardingStatus })?.status ?? "not_started") as OnboardingStatus,
     lastActivity: ((e.instance as { updatedAt?: Date })?.updatedAt ?? (e.updatedAt as Date)).toString(),
     createdAt: (e.createdAt as Date).toISOString(),
+    tenureEndedAt: e.tenureEndedAt ? (e.tenureEndedAt as Date).toISOString() : null,
   }));
 
   if (statusFilter !== "all") rows = rows.filter((r) => r.status === statusFilter);
@@ -103,6 +111,7 @@ export default async function EmployeesPage({
     if (departmentFilter !== "all") params.set("department", departmentFilter);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (sort !== "recent") params.set("sort", sort);
+    if (view !== "active") params.set("view", view);
     params.set("page", String(p));
     return `/employees?${params.toString()}`;
   }
@@ -115,13 +124,34 @@ export default async function EmployeesPage({
         actions={<Button asChild variant="brand"><Link href="/employees/new"><Plus /> New employee</Link></Button>}
       />
 
+      <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 text-sm w-fit">
+        <Link
+          href="/employees"
+          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${view === "active" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Active <span className="ml-1 text-xs text-muted-foreground tabular-nums">{activeCount}</span>
+        </Link>
+        <Link
+          href="/employees?view=past"
+          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${view === "past" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Past employees <span className="ml-1 text-xs text-muted-foreground tabular-nums">{pastCount}</span>
+        </Link>
+      </div>
+
       <EmployeesToolbar departments={plain(departments.map((d) => ({ _id: String(d._id), name: d.name })))} />
 
       {total === 0 ? (
         <EmptyState
           icon={Users}
-          title="No employees found"
-          description={q || statusFilter !== "all" || departmentFilter !== "all" ? "Try adjusting your filters." : "Create your first employee to generate onboarding."}
+          title={view === "past" ? "No past employees" : "No employees found"}
+          description={
+            view === "past"
+              ? "Employees whose tenure has ended will appear here."
+              : q || statusFilter !== "all" || departmentFilter !== "all"
+                ? "Try adjusting your filters."
+                : "Create your first employee to generate onboarding."
+          }
           action={<Button asChild variant="brand"><Link href="/employees/new"><Plus /> New employee</Link></Button>}
         />
       ) : (
@@ -135,7 +165,7 @@ export default async function EmployeesPage({
                 <TableHead className="hidden lg:table-cell">Joining</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden xl:table-cell">Last activity</TableHead>
+                <TableHead className="hidden xl:table-cell">{view === "past" ? "Tenure ended" : "Last activity"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -160,7 +190,9 @@ export default async function EmployeesPage({
                     </div>
                   </TableCell>
                   <TableCell><OnboardingStatusBadge status={r.status} /></TableCell>
-                  <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">{timeAgo(r.lastActivity)}</TableCell>
+                  <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
+                    {view === "past" ? (r.tenureEndedAt ? formatDate(r.tenureEndedAt) : "—") : timeAgo(r.lastActivity)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

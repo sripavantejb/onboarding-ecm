@@ -3,7 +3,7 @@ import { requireCapability } from "@/lib/authz";
 import { dbConnect } from "@/lib/db";
 import {
   Employee, OnboardingInstance, OnboardingStep, OnboardingToken,
-  DocumentSubmission, AssessmentAttempt, Review, ActivityLog, OfferLetter,
+  DocumentSubmission, AssessmentAttempt, Review, ActivityLog, OfferLetter, Policy,
 } from "@/models";
 import { plain } from "@/lib/utils";
 import { EmployeeDetailView, type EmployeeDetail } from "@/components/admin/employee-detail-view";
@@ -26,7 +26,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   const instance = employee.instance ? await OnboardingInstance.findById(employee.instance).lean() : null;
 
-  const [steps, tokens, submissions, attempts, reviews, activity, offer] = await Promise.all([
+  const [steps, tokens, submissions, attempts, reviews, activity, offer, policies] = await Promise.all([
     instance ? OnboardingStep.find({ instance: instance._id }).sort({ order: 1 }).lean() : [],
     instance ? OnboardingToken.find({ instance: instance._id }).sort({ createdAt: -1 }).lean() : [],
     instance ? DocumentSubmission.find({ instance: instance._id }).sort({ createdAt: -1 }).lean() : [],
@@ -34,6 +34,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     instance ? Review.find({ instance: instance._id }).sort({ type: 1 }).lean() : [],
     ActivityLog.find({ employee: employee._id }).sort({ createdAt: -1 }).limit(100).lean(),
     OfferLetter.findOne({ employee: employee._id }).lean(),
+    Policy.find({ status: "published" }).select("title category").sort({ title: 1 }).lean(),
   ]);
 
   const now = Date.now();
@@ -57,6 +58,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       workMode: employee.workMode,
       profile: (employee.profile ?? {}) as Record<string, unknown>,
       passwordSetAt: employee.portalPasswordSetAt ? (employee.portalPasswordSetAt as Date).toISOString() : null,
+      employmentStatus: (employee.status ?? "active") as "active" | "archived" | "past",
+      tenureEndedAt: employee.tenureEndedAt ? (employee.tenureEndedAt as Date).toISOString() : null,
+      tenureEndReason: employee.tenureEndReason ?? "",
     },
     instance: instance
       ? {
@@ -142,9 +146,16 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           issuedByName: offer.issuedByName ?? "",
           acceptedAt: offer.acceptedAt ? (offer.acceptedAt as Date).toISOString() : null,
           fileId: String(offer.fileId),
+          fileName: offer.fileName ?? "",
+          source: (offer.source ?? "generated") as "generated" | "uploaded",
           terms: offer.terms ?? [],
         }
       : null,
+    policies: policies.map((p) => ({
+      _id: String(p._id),
+      title: p.title,
+      category: p.category,
+    })),
   };
 
   return <EmployeeDetailView detail={plain(detail)} />;

@@ -5,9 +5,11 @@ import { dbConnect } from "@/lib/db";
 import { OnboardingToken, OnboardingInstance, Employee } from "@/models";
 import { requireCapability } from "@/lib/authz";
 import { ok, fail, guard, type ActionResult } from "@/lib/action-result";
-import { generateOnboardingToken } from "@/lib/tokens";
+import { generateOnboardingToken, generatePassword } from "@/lib/tokens";
+import { hashPassword } from "@/lib/password";
 import { onboardingUrl, defaultExpiry } from "@/lib/onboarding-links";
 import { logActivity, notify } from "@/lib/activity";
+import { infoBox } from "@/lib/email";
 
 /** Revoke existing active tokens and issue a fresh one. Returns the new URL. */
 export async function regenerateToken(instanceId: string): Promise<ActionResult<{ url: string }>> {
@@ -80,30 +82,79 @@ export async function setTokenExpiry(instanceId: string, input: unknown): Promis
   });
 }
 
-export async function sendInvitation(instanceId: string): Promise<ActionResult> {
+/**
+ * Send the onboarding invitation email. Because the portal password is stored
+ * only as a hash, we (re)set a fresh password and issue a fresh onboarding link
+ * here so the email always contains working credentials. Re-sending therefore
+ * rotates the previous password/link.
+ */
+export async function sendInvitation(instanceId: string): Promise<ActionResult<{ url: string }>> {
   return guard(async () => {
     const user = await requireCapability("employees");
     await dbConnect();
     const instance = await OnboardingInstance.findById(instanceId);
     if (!instance) return fail("Onboarding instance not found.");
-    const activeToken = await OnboardingToken.findOne({ instance: instance._id, status: "active" });
-    if (!activeToken) return fail("No active link. Regenerate a link before sending the invitation.");
+
+    const employee = await Employee.findById(instance.employee);
+    if (!employee) return fail("Employee not found.");
+
+    // Fresh portal password (only the hash is stored) so we can email real creds.
+    const portalPassword = generatePassword();
+    employee.portalPasswordHash = await hashPassword(portalPassword);
+    employee.portalPasswordSetAt = new Date();
+    await employee.save();
+
+    // Fresh onboarding link — revoke any active token, issue a new one.
+    await OnboardingToken.updateMany(
+      { instance: instance._id, status: "active" },
+      { $set: { status: "revoked" } },
+    );
+    const { raw, hash } = generateOnboardingToken();
+    await OnboardingToken.create({
+      instance: instance._id,
+      employee: employee._id,
+      tokenHash: hash,
+      status: "active",
+      expiresAt: defaultExpiry(),
+      createdByName: user.name,
+    });
+    const url = onboardingUrl(raw);
 
     instance.invitationSentAt = new Date();
     await instance.save();
 
-    const employee = await Employee.findById(instance.employee).select("fullName email").lean();
+    const firstName = employee.fullName.split(" ")[0] || "there";
+    await notify({
+      audience: "employee",
+      type: "invitation",
+      title: "Your Editco onboarding is ready",
+      message: "Open your secure link to begin onboarding.",
+      employee: employee._id,
+      instance: instance._id,
+      email: {
+        to: employee.email,
+        subject: "Welcome to Editco — start your onboarding",
+        heading: `Welcome to Editco, ${firstName}! 👋`,
+        intro:
+          "Your onboarding portal is ready. Use the button below to open your secure onboarding link, then sign in with the credentials shown here.",
+        bodyHtml: infoBox([
+          { label: "Portal email", value: employee.email, mono: true },
+          { label: "Password", value: portalPassword, mono: true },
+        ]),
+        ctaLabel: "Start onboarding",
+        ctaUrl: url,
+        footerNote:
+          "This link is unique to you and expires in 14 days. For your security, keep these credentials private.",
+      },
+    });
+
     await logActivity({
       actorType: "admin", actorName: user.name, action: "invitation.sent",
-      message: `Invitation sent to ${employee?.fullName ?? "employee"} (${employee?.email ?? ""})`,
-      employee: instance.employee, instance: instance._id,
+      message: `Invitation emailed to ${employee.fullName} (${employee.email})`,
+      employee: employee._id, instance: instance._id,
     });
-    await notify({
-      audience: "employee", type: "invitation", title: "Your Editco onboarding is ready",
-      message: "Open your secure link to begin onboarding.", employee: instance.employee, instance: instance._id,
-    });
+
     revalidatePath(`/employees/${instance.employee}`);
-    // Email transport can be wired into notify() later; the invitation is recorded now.
-    return ok(undefined, "Invitation recorded & employee notified");
+    return ok({ url }, `Invitation emailed to ${employee.email}`);
   });
 }

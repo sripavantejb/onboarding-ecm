@@ -147,6 +147,62 @@ export async function createEmployeeAndGenerate(
   });
 }
 
+const updateSchema = z.object({
+  fullName: z.string().min(2, "Full name is required").max(120),
+  email: z.string().email("Enter a valid email"),
+});
+
+/** Edit an employee's basic details (name, email). Keeps denormalized copies in sync. */
+export async function updateEmployee(
+  employeeId: string,
+  input: unknown,
+): Promise<ActionResult> {
+  return guard(async () => {
+    const user = await requireCapability("employees");
+    const parsed = updateSchema.safeParse(input);
+    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Please check the form.");
+    await dbConnect();
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) return fail("Employee not found.");
+
+    const previousName = employee.fullName;
+    const previousEmail = employee.email;
+    const nextEmail = parsed.data.email.toLowerCase().trim();
+
+    // Email is the portal login identity — don't let two employees share one.
+    if (nextEmail !== previousEmail) {
+      const clash = await Employee.exists({ _id: { $ne: employee._id }, email: nextEmail });
+      if (clash) return fail("Another employee already uses that email.");
+    }
+
+    employee.fullName = parsed.data.fullName.trim();
+    employee.email = nextEmail;
+    await employee.save();
+
+    // Onboarding instances snapshot the name for fast lists — keep it consistent.
+    if (employee.instance) {
+      await OnboardingInstance.updateOne(
+        { _id: employee.instance },
+        { $set: { employeeName: employee.fullName } },
+      );
+    }
+
+    const changes: string[] = [];
+    if (previousName !== employee.fullName) changes.push(`name “${previousName}” → “${employee.fullName}”`);
+    if (previousEmail !== nextEmail) changes.push(`email ${previousEmail} → ${nextEmail}`);
+    await logActivity({
+      actorType: "admin", actorName: user.name, action: "employee.updated",
+      message: `Updated employee ${changes.join(", ") || "details"}`,
+      employee: employee._id, instance: employee.instance, resourceType: "Employee", resourceId: employee._id,
+    });
+
+    revalidatePath(`/employees/${employeeId}`);
+    revalidatePath("/employees");
+    return ok(undefined, "Employee details updated");
+  });
+}
+
 export async function archiveEmployee(id: string): Promise<ActionResult> {
   return guard(async () => {
     const user = await requireCapability("employees");
@@ -159,5 +215,73 @@ export async function archiveEmployee(id: string): Promise<ActionResult> {
     });
     revalidatePath("/employees");
     return ok(undefined, "Employee archived and links revoked");
+  });
+}
+
+const endTenureSchema = z.object({
+  reason: z.string().max(300).optional().default(""),
+});
+
+/**
+ * End an employee's tenure. Moves them to the "past employees" list, revokes
+ * their portal access, and — via the status gate in `notify()` — stops any
+ * further onboarding/update emails from reaching them.
+ */
+export async function endTenure(employeeId: string, input: unknown): Promise<ActionResult> {
+  return guard(async () => {
+    const user = await requireCapability("employees");
+    const parsed = endTenureSchema.safeParse(input ?? {});
+    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Please check the form.");
+    await dbConnect();
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) return fail("Employee not found.");
+    if (employee.status === "past") return fail("This employee's tenure has already ended.");
+
+    const reason = parsed.data.reason.trim();
+    employee.status = "past";
+    employee.tenureEndedAt = new Date();
+    employee.tenureEndReason = reason;
+    await employee.save();
+
+    // Cut off portal access — links stop working immediately.
+    await OnboardingToken.updateMany({ employee: employee._id }, { $set: { status: "revoked" } });
+
+    await logActivity({
+      actorType: "admin", actorName: user.name, action: "employee.tenure_ended",
+      message: `Ended tenure for ${employee.fullName}${reason ? ` — ${reason}` : ""}`,
+      employee: employee._id, instance: employee.instance, resourceType: "Employee", resourceId: employee._id,
+    });
+
+    revalidatePath(`/employees/${employeeId}`);
+    revalidatePath("/employees");
+    return ok(undefined, "Tenure ended — moved to past employees");
+  });
+}
+
+/** Reverse an end-tenure: bring a former employee back to active. Portal links must be regenerated. */
+export async function reactivateEmployee(employeeId: string): Promise<ActionResult> {
+  return guard(async () => {
+    const user = await requireCapability("employees");
+    await dbConnect();
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) return fail("Employee not found.");
+    if (employee.status === "active") return fail("This employee is already active.");
+
+    employee.status = "active";
+    employee.tenureEndedAt = null;
+    employee.tenureEndReason = "";
+    await employee.save();
+
+    await logActivity({
+      actorType: "admin", actorName: user.name, action: "employee.reactivated",
+      message: `Reactivated ${employee.fullName}`,
+      employee: employee._id, instance: employee.instance, resourceType: "Employee", resourceId: employee._id,
+    });
+
+    revalidatePath(`/employees/${employeeId}`);
+    revalidatePath("/employees");
+    return ok(undefined, "Employee reactivated — regenerate their link to restore portal access");
   });
 }

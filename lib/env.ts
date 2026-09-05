@@ -29,4 +29,27 @@ export const env = {
     if (vercel) return `https://${vercel}`;
     return "http://localhost:3000";
   },
+
+  // --- Email (SMTP) — optional. When unset, emails are skipped (logged) instead
+  // of throwing, so the app keeps working in local/dev without mail configured. ---
+  get SMTP_HOST() {
+    return process.env.SMTP_HOST || "smtp.gmail.com";
+  },
+  get SMTP_PORT() {
+    return Number(process.env.SMTP_PORT || 465);
+  },
+  get SMTP_USER() {
+    return process.env.SMTP_USER || "";
+  },
+  get SMTP_PASS() {
+    // Gmail app passwords are shown with spaces; strip them so either form works.
+    return (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+  },
+  get SMTP_FROM() {
+    // Friendly From header; defaults to the authenticated user.
+    return process.env.SMTP_FROM || (process.env.SMTP_USER ? `Editco <${process.env.SMTP_USER}>` : "");
+  },
+  get isEmailConfigured() {
+    return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+  },
 };

@@ -42,7 +42,11 @@ export interface IEmployee {
   joiningDate: Date;
   employmentType: EmploymentType;
   workMode: WorkMode;
-  status: "active" | "archived";
+  // "active" = current employee; "past" = tenure ended (former employee, no more emails); "archived" = hidden.
+  status: "active" | "archived" | "past";
+  // Set when an admin ends the tenure. Drives the "Past employees" view.
+  tenureEndedAt?: Date | null;
+  tenureEndReason?: string;
   instance?: mongoose.Types.ObjectId | null;
   profile: IEmployeeProfile;
   // Portal login credentials — set/reset by admins only.
@@ -70,7 +74,9 @@ const EmployeeSchema = new Schema<IEmployee>(
       default: "Full-time",
     },
     workMode: { type: String, enum: ["On-site", "Remote", "Hybrid"], default: "On-site" },
-    status: { type: String, enum: ["active", "archived"], default: "active" },
+    status: { type: String, enum: ["active", "archived", "past"], default: "active" },
+    tenureEndedAt: { type: Date, default: null },
+    tenureEndReason: { type: String, default: "" },
     instance: { type: Schema.Types.ObjectId, ref: "OnboardingInstance", default: null },
     profile: { type: Schema.Types.Mixed, default: {} },
     portalPasswordHash: { type: String, default: "" },

@@ -2,12 +2,13 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { dbConnect } from "@/lib/db";
-import { Policy, PolicyVersion } from "@/models";
+import { Policy, PolicyVersion, Employee, OnboardingInstance, OnboardingStep } from "@/models";
 import { requireCapability } from "@/lib/authz";
 import { ok, fail, guard, type ActionResult } from "@/lib/action-result";
 import { slugify } from "@/lib/utils";
 import { sanitizeRichText } from "@/lib/sanitize";
-import { logActivity } from "@/lib/activity";
+import { logActivity, notify } from "@/lib/activity";
+import { recomputeInstance } from "@/lib/instance-state";
 
 const metaSchema = z.object({
   title: z.string().min(2, "Title is too short").max(120),
@@ -130,6 +131,93 @@ export async function publishPolicy(id: string): Promise<ActionResult> {
     revalidatePath(`/policies/${id}`);
     revalidatePath("/policies");
     return ok(undefined, `Published version ${draft.version}`);
+  });
+}
+
+/**
+ * Assign a published policy to an already-onboarding employee: adds a "sign this
+ * policy" step to their onboarding (snapshotting the latest published version)
+ * and emails them to review & sign it. Idempotent per policy per employee.
+ */
+export async function assignPolicyToEmployee(
+  employeeId: string,
+  policyId: string,
+): Promise<ActionResult> {
+  return guard(async () => {
+    const user = await requireCapability("policies");
+    await dbConnect();
+
+    const employee = await Employee.findById(employeeId).select("fullName email instance").lean();
+    if (!employee) return fail("Employee not found.");
+    if (!employee.instance) return fail("This employee has no onboarding to add a policy to.");
+
+    const instance = await OnboardingInstance.findById(employee.instance);
+    if (!instance) return fail("Onboarding instance not found.");
+
+    const policy = await Policy.findById(policyId).lean();
+    if (!policy) return fail("Policy not found.");
+    if (policy.status !== "published" || !policy.latestPublished)
+      return fail("Only published policies can be assigned. Publish it first.");
+    const version = await PolicyVersion.findById(policy.latestPublished).lean();
+
+    // Don't add the same policy twice.
+    const exists = await OnboardingStep.findOne({
+      instance: instance._id,
+      kind: "policy",
+      "snapshot.policyKey": policy.key,
+    }).select("_id").lean();
+    if (exists) return fail(`“${policy.title}” is already assigned to this employee.`);
+
+    // Place it after any existing policy steps (POLICIES section base order = 4000).
+    const policySteps = await OnboardingStep.find({ instance: instance._id, section: "POLICIES" })
+      .select("order").lean();
+    const order = (policySteps.length ? Math.max(...policySteps.map((s) => s.order)) : 4000) + 1;
+
+    await OnboardingStep.create({
+      instance: instance._id,
+      employee: instance.employee,
+      section: "POLICIES",
+      kind: "policy",
+      title: policy.title,
+      required: true,
+      order,
+      status: "not_started",
+      refKind: "policy",
+      refId: policy._id,
+      addedByAdmin: true,
+      version: version?.version ?? "1.0",
+      snapshot: {
+        policyKey: policy.key,
+        versionId: String(version?._id ?? ""),
+        version: version?.version ?? "1.0",
+        title: version?.title ?? policy.title,
+        body: version?.body ?? "",
+        effectiveDate: version?.effectiveDate ?? null,
+      },
+    });
+
+    // Adding a required step changes progress — recompute from steps.
+    await recomputeInstance(instance._id);
+
+    await logActivity({
+      actorType: "admin", actorName: user.name, action: "policy.assigned",
+      message: `Assigned policy “${policy.title}” to ${employee.fullName}`,
+      employee: instance.employee, instance: instance._id, resourceType: "Policy", resourceId: policy._id,
+    });
+    await notify({
+      audience: "employee", type: "policy.assigned", title: "New policy to review & sign",
+      message: `Please review and sign “${policy.title}”.`,
+      employee: instance.employee, instance: instance._id,
+      email: {
+        to: employee.email,
+        heading: "A new policy needs your signature ✍️",
+        intro: `A new policy — “${policy.title}” — has been added to your onboarding for you to read and acknowledge.`,
+        footerNote: "Sign in to your onboarding portal to review and sign this policy.",
+      },
+    });
+
+    revalidatePath(`/employees/${employeeId}`);
+    return ok(undefined, `“${policy.title}” assigned — employee notified`);
   });
 }
 
