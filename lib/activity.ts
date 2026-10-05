@@ -64,8 +64,9 @@ interface NotifyInput {
 /**
  * Create a notification (and optionally send an email). This is the single
  * funnel — pass `email` to also deliver a branded message to the recipient.
+ * Returns whether the email was actually handed off to SMTP.
  */
-export async function notify(input: NotifyInput): Promise<void> {
+export async function notify(input: NotifyInput): Promise<{ emailed: boolean }> {
   try {
     await Notification.create({
       audience: input.audience,
@@ -81,7 +82,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     console.error("notify failed", err);
   }
 
-  if (!input.email) return;
+  if (!input.email) return { emailed: false };
   try {
     let to = input.email.to;
     if (input.employee) {
@@ -89,15 +90,15 @@ export async function notify(input: NotifyInput): Promise<void> {
       // Former employees (tenure ended) receive no further update emails.
       if (emp && emp.status !== "active") {
         console.warn(`[email] recipient is not an active employee — skipped "${input.title}"`);
-        return;
+        return { emailed: false };
       }
       if (!to) to = emp?.email ?? undefined;
     }
     if (!to) {
       console.warn(`[email] no recipient for notification "${input.title}" — skipped`);
-      return;
+      return { emailed: false };
     }
-    await sendMail({
+    const emailed = await sendMail({
       to,
       subject: input.email.subject ?? input.title,
       html: renderEmail({
@@ -109,7 +110,9 @@ export async function notify(input: NotifyInput): Promise<void> {
         footerNote: input.email.footerNote,
       }),
     });
+    return { emailed };
   } catch (err) {
     console.error("notify email failed", err);
+    return { emailed: false };
   }
 }

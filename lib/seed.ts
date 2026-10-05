@@ -27,12 +27,30 @@ import {
 } from "@/lib/seed-content";
 import type { ITemplateItem } from "@/models/OnboardingTemplate";
 
+export interface SeedAdminAccount {
+  name: string;
+  email: string;
+  created: boolean;
+  updated: boolean;
+}
+
 export interface SeedResult {
+  /** @deprecated use `admins` — kept for older script callers */
   createdAdmin: boolean;
   adminEmail: string;
   adminPassword?: string;
+  admins: SeedAdminAccount[];
   counts: Record<string, number>;
 }
+
+/** Team accounts seeded for admin login + reporting-manager picker. */
+const TEAM_ADMINS = [
+  { name: "Deepika Mundla", email: "deepikamundla54@gmail.com", role: "SUPER_ADMIN" as const },
+  { name: "Harsha Polina", email: "harshapolina1@gmail.com", role: "SUPER_ADMIN" as const },
+  { name: "Sri Pavan Tej", email: "sripavantejb@gmail.com", role: "SUPER_ADMIN" as const },
+];
+const TEAM_ADMIN_PASSWORD = "abc@123";
+const LEGACY_ADMIN_EMAIL = "admin@editcomedia.com";
 
 type OID = mongoose.Types.ObjectId;
 
@@ -79,21 +97,57 @@ async function upsertContent(items: SeedContent[]): Promise<Map<string, OID>> {
 export async function runSeed(): Promise<SeedResult> {
   await dbConnect();
 
-  // ---- Default admin ------------------------------------------------------
-  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@editcomedia.com").toLowerCase();
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Editco@2025";
-  let createdAdmin = false;
-  const existingAdmin = await User.findOne({ email: adminEmail });
-  if (!existingAdmin) {
-    await User.create({
-      name: "Editco Admin",
-      email: adminEmail,
-      passwordHash: await hashPassword(adminPassword),
-      role: "SUPER_ADMIN",
-      status: "active",
-    });
-    createdAdmin = true;
+  // ---- Admin team accounts ------------------------------------------------
+  // Env overrides still work for a single bootstrap account; otherwise seed the
+  // Editco team so reporting managers and logins are ready out of the box.
+  const passwordHash = await hashPassword(
+    process.env.SEED_ADMIN_PASSWORD || TEAM_ADMIN_PASSWORD,
+  );
+  const admins: SeedAdminAccount[] = [];
+
+  const teamToSeed = process.env.SEED_ADMIN_EMAIL
+    ? [
+        {
+          name: "Editco Admin",
+          email: process.env.SEED_ADMIN_EMAIL.toLowerCase(),
+          role: "SUPER_ADMIN" as const,
+        },
+      ]
+    : TEAM_ADMINS;
+
+  for (const account of teamToSeed) {
+    const email = account.email.toLowerCase();
+    const existing = await User.findOne({ email });
+    if (!existing) {
+      await User.create({
+        name: account.name,
+        email,
+        passwordHash,
+        role: account.role,
+        status: "active",
+      });
+      admins.push({ name: account.name, email, created: true, updated: false });
+    } else {
+      existing.name = account.name;
+      existing.passwordHash = passwordHash;
+      existing.role = account.role;
+      existing.status = "active";
+      await existing.save();
+      admins.push({ name: account.name, email, created: false, updated: true });
+    }
   }
+
+  // Retire the old default admin so it no longer appears as a reporting manager.
+  if (!process.env.SEED_ADMIN_EMAIL) {
+    await User.updateOne(
+      { email: LEGACY_ADMIN_EMAIL },
+      { $set: { status: "disabled" } },
+    );
+  }
+
+  const createdAdmin = admins.some((a) => a.created);
+  const adminEmail = admins[0]?.email ?? LEGACY_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || TEAM_ADMIN_PASSWORD;
 
   // ---- Departments & roles ------------------------------------------------
   const roleIdBySlug = new Map<string, OID>();
@@ -285,7 +339,8 @@ export async function runSeed(): Promise<SeedResult> {
   return {
     createdAdmin,
     adminEmail,
-    adminPassword: createdAdmin ? adminPassword : undefined,
+    adminPassword,
+    admins,
     counts,
   };
 }

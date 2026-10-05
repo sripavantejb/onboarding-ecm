@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/auth";
 import { getFile } from "@/lib/gridfs";
 import type { ReadableStream as WebReadableStream } from "stream/web";
 import { Readable } from "stream";
@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  * document URLs are never public. Files live in GridFS, not on a public path.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ fileId: string }> }) {
-  const session = await getSession();
+  const session = await getActiveSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   const { fileId } = await params;

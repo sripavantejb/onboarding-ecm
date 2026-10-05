@@ -538,7 +538,7 @@ function FinalChecklistTask({ data, onDone }: { data: StepViewData; onDone: () =
       <Card className="border-success/30 bg-success/[0.05]">
         <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
           <PartyPopper className="h-8 w-8 text-success" />
-          <div><p className="font-semibold">Onboarding complete</p><p className="text-sm text-muted-foreground">Thank you — welcome to Editco! 🎉</p></div>
+          <div><p className="font-semibold">Onboarding complete</p><p className="text-sm text-muted-foreground">Thank you — welcome to Editco!</p></div>
           <Button variant="outline" onClick={onDone}>Back to overview</Button>
         </CardContent>
       </Card>

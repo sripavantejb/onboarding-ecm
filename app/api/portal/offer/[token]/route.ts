@@ -13,7 +13,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const { token } = await params;
   const portal = await resolvePortal(token);
   if (!portal.ok) return new NextResponse("Link is no longer valid", { status: 403 });
-  if (!(await employeeAuthedFor(portal.employee._id.toString(), portal.instance._id.toString()))) {
+  if (!(await employeeAuthedFor(
+    portal.employee._id.toString(),
+    portal.instance._id.toString(),
+    portal.employee.portalPasswordSetAt,
+  ))) {
     return new NextResponse("Please sign in to your portal first", { status: 401 });
   }
 

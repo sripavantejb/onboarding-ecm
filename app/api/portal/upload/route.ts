@@ -22,7 +22,11 @@ export async function POST(req: Request) {
 
     const portal = await resolvePortal(token);
     if (!portal.ok) return NextResponse.json({ ok: false, error: "This link is no longer valid." }, { status: 403 });
-    if (!(await employeeAuthedFor(portal.employee._id.toString(), portal.instance._id.toString()))) {
+    if (!(await employeeAuthedFor(
+      portal.employee._id.toString(),
+      portal.instance._id.toString(),
+      portal.employee.portalPasswordSetAt,
+    ))) {
       return NextResponse.json({ ok: false, error: "Please sign in to your portal first." }, { status: 401 });
     }
 

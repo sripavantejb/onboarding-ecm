@@ -1,5 +1,5 @@
 import "server-only";
-import { getSession, type SessionPayload } from "@/lib/auth";
+import { getActiveSession, type SessionPayload } from "@/lib/auth";
 import { CAPABILITIES, can } from "@/lib/authz-client";
 import type { UserRole } from "@/types";
 
@@ -19,12 +19,12 @@ export class ForbiddenError extends Error {
 }
 
 export async function getCurrentUser(): Promise<SessionPayload | null> {
-  return getSession();
+  return getActiveSession();
 }
 
-/** Throws AuthError if not logged in. */
+/** Throws AuthError if not logged in or the account is disabled. */
 export async function requireUser(): Promise<SessionPayload> {
-  const user = await getSession();
+  const user = await getActiveSession();
   if (!user) throw new AuthError();
   return user;
 }

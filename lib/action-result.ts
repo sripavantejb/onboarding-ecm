@@ -22,8 +22,8 @@ export async function guard<T>(fn: () => Promise<ActionResult<T>>): Promise<Acti
   } catch (err) {
     if (err instanceof AuthError) return fail("Please sign in to continue.");
     if (err instanceof ForbiddenError) return fail(err.message);
+    // Never surface internal/driver messages (Mongo timeouts, etc.) to the UI.
     console.error("Server action error:", err);
-    const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
-    return fail(message);
+    return fail("Something went wrong. Please try again.");
   }
 }

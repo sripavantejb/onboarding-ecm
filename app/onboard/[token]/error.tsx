@@ -4,13 +4,13 @@ import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function PortalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
-    <div className="grid min-h-[60vh] place-items-center">
+    <div className="grid min-h-[60vh] place-items-center p-6">
       <Card className="max-w-md">
         <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-destructive/10 text-destructive">

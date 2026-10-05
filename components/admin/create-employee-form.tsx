@@ -42,6 +42,7 @@ const schema = z.object({
   department: z.string().min(1, "Select a department"),
   role: z.string().min(1, "Select a role"),
   reportingManager: z.string().optional(),
+  reportingManagerName: z.string().min(2, "Reporting manager name is required"),
   joiningDate: z.string().min(1, "Select a joining date"),
   employmentType: z.enum(EMPLOYMENT_TYPES),
   workMode: z.enum(WORK_MODES),
@@ -77,7 +78,8 @@ export function CreateEmployeeForm({
     resolver: zodResolver(schema),
     defaultValues: {
       fullName: "", email: "", phone: "", department: "", role: "",
-      reportingManager: "", joiningDate: "", employmentType: "Full-time", workMode: "On-site",
+      reportingManager: "", reportingManagerName: "",
+      joiningDate: "", employmentType: "Full-time", workMode: "On-site",
     },
   });
 
@@ -157,14 +159,36 @@ export function CreateEmployeeForm({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Reporting manager">
-                <Select value={watch("reportingManager")} onValueChange={(v) => setValue("reportingManager", v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {managers.map((m) => <SelectItem key={m._id} value={m._id}>{m.name} · {ROLE_LABELS[m.role]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <Field label="Reporting manager" error={errors.reportingManagerName?.message}>
+                <div className="space-y-2">
+                  <Select
+                    value={watch("reportingManager") || "custom"}
+                    onValueChange={(v) => {
+                      if (v === "custom") {
+                        setValue("reportingManager", "", { shouldValidate: true });
+                        return;
+                      }
+                      const mgr = managers.find((m) => m._id === v);
+                      setValue("reportingManager", v, { shouldValidate: true });
+                      if (mgr) setValue("reportingManagerName", mgr.name, { shouldValidate: true });
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Pick a teammate or type a name" /></SelectTrigger>
+                    <SelectContent>
+                      {managers.map((m) => (
+                        <SelectItem key={m._id} value={m._id}>{m.name} · {ROLE_LABELS[m.role]}</SelectItem>
+                      ))}
+                      <SelectItem value="custom">Someone else (type name)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Reporting manager full name"
+                    {...register("reportingManagerName")}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Pick a team member above, or type any manager&apos;s name. Required for every new hire.
+                  </p>
+                </div>
               </Field>
               <Field label="Joining date" error={errors.joiningDate?.message}>
                 <Input type="date" {...register("joiningDate")} />

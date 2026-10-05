@@ -3,11 +3,11 @@ import { requireCapability } from "@/lib/authz";
 import { dbConnect } from "@/lib/db";
 import {
   Employee, OnboardingInstance, OnboardingStep, OnboardingToken,
-  DocumentSubmission, AssessmentAttempt, Review, ActivityLog, OfferLetter, Policy,
+  DocumentSubmission, AssessmentAttempt, Review, ActivityLog, OfferLetter, Policy, User,
 } from "@/models";
 import { plain } from "@/lib/utils";
-import { EmployeeDetailView, type EmployeeDetail } from "@/components/admin/employee-detail-view";
-import type { OnboardingStatus, StepStatus } from "@/types";
+import { EmployeeDetailView, type EmployeeDetail, type ManagerOption } from "@/components/admin/employee-detail-view";
+import type { OnboardingStatus, StepStatus, UserRole } from "@/types";
 
 export const metadata = { title: "Employee" };
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   const instance = employee.instance ? await OnboardingInstance.findById(employee.instance).lean() : null;
 
-  const [steps, tokens, submissions, attempts, reviews, activity, offer, policies] = await Promise.all([
+  const [steps, tokens, submissions, attempts, reviews, activity, offer, policies, managers] = await Promise.all([
     instance ? OnboardingStep.find({ instance: instance._id }).sort({ order: 1 }).lean() : [],
     instance ? OnboardingToken.find({ instance: instance._id }).sort({ createdAt: -1 }).lean() : [],
     instance ? DocumentSubmission.find({ instance: instance._id }).sort({ createdAt: -1 }).lean() : [],
@@ -35,6 +35,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     ActivityLog.find({ employee: employee._id }).sort({ createdAt: -1 }).limit(100).lean(),
     OfferLetter.findOne({ employee: employee._id }).lean(),
     Policy.find({ status: "published" }).select("title category").sort({ title: 1 }).lean(),
+    User.find({ status: "active" }).select("name role").sort({ name: 1 }).lean(),
   ]);
 
   const now = Date.now();
@@ -52,6 +53,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       employeeCode: employee.employeeCode,
       department: (employee.department as { name?: string })?.name ?? "—",
       role: (employee.role as { title?: string })?.title ?? "—",
+      reportingManager: employee.reportingManager ? String(employee.reportingManager) : "",
       reportingManagerName: employee.reportingManagerName ?? "",
       joiningDate: (employee.joiningDate as Date).toISOString(),
       employmentType: employee.employmentType,
@@ -158,5 +160,11 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     })),
   };
 
-  return <EmployeeDetailView detail={plain(detail)} />;
+  const managerOptions: ManagerOption[] = managers.map((m) => ({
+    _id: String(m._id),
+    name: m.name,
+    role: m.role as UserRole,
+  }));
+
+  return <EmployeeDetailView detail={plain(detail)} managers={plain(managerOptions)} />;
 }

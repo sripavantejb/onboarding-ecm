@@ -15,7 +15,11 @@ import { logActivity, notify } from "@/lib/activity";
 async function authorizeStep(token: string, stepId: string) {
   const portal = await resolvePortal(token);
   if (!portal.ok) return { error: portal.reason } as const;
-  if (!(await employeeAuthedFor(portal.employee._id.toString(), portal.instance._id.toString()))) {
+  if (!(await employeeAuthedFor(
+    portal.employee._id.toString(),
+    portal.instance._id.toString(),
+    portal.employee.portalPasswordSetAt,
+  ))) {
     return { error: "invalid" as const };
   }
   const step = await OnboardingStep.findById(stepId);
@@ -254,7 +258,11 @@ export async function acceptOffer(token: string): Promise<ActionResult> {
   return guard(async () => {
     const portal = await resolvePortal(token);
     if (!portal.ok) return fail("This link is no longer valid.");
-    if (!(await employeeAuthedFor(portal.employee._id.toString(), portal.instance._id.toString()))) {
+    if (!(await employeeAuthedFor(
+      portal.employee._id.toString(),
+      portal.instance._id.toString(),
+      portal.employee.portalPasswordSetAt,
+    ))) {
       return fail("Please sign in to your portal first.");
     }
     const offer = await OfferLetter.findOne({ instance: portal.instance._id });
@@ -315,6 +323,6 @@ export async function completeOnboarding(token: string, stepId: string, input: u
       message: "Signed the employee declaration", employee: portal.employee._id, instance: portal.instance._id,
     });
     reval(token);
-    return ok(undefined, "Onboarding complete 🎉");
+    return ok(undefined, "Onboarding complete");
   });
 }

@@ -7,23 +7,24 @@ import mongoose from "mongoose";
 import { runSeed } from "@/lib/seed";
 
 async function main() {
-  console.log("→ Seeding Editco Onboarding database…");
+  console.log("Seeding Editco Onboarding database...");
   const result = await runSeed();
-  console.log("\n✔ Seed complete.");
+  console.log("\n[ok] Seed complete.");
   console.table(result.counts);
-  if (result.createdAdmin) {
-    console.log("\nDefault admin account created:");
-    console.log(`  Email:    ${result.adminEmail}`);
-    console.log(`  Password: ${result.adminPassword}`);
-    console.log("  ⚠ Change this password after first login (Settings).");
-  } else {
-    console.log(`\nAdmin already existed (${result.adminEmail}) — left untouched.`);
+
+  if (result.admins?.length) {
+    console.log("\nAdmin accounts (password for all: " + (result.adminPassword ?? "(unchanged)") + "):");
+    for (const a of result.admins) {
+      const flag = a.created ? "created" : a.updated ? "updated" : "ok";
+      console.log(`  [${flag}] ${a.name} <${a.email}>`);
+    }
   }
+
   await mongoose.disconnect();
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("�‑ Seed failed:", err);
+  console.error("[fail] Seed failed:", err);
   process.exit(1);
 });

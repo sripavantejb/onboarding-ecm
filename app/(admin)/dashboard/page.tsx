@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Users, PlayCircle, AlertTriangle, Clock, CheckCircle2, CircleDashed, Plus, CalendarDays, ArrowRight,
 } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/auth";
 import { dbConnect } from "@/lib/db";
 import { Employee, OnboardingInstance } from "@/models";
 import { PageHeader } from "@/components/page-header";
@@ -21,7 +21,7 @@ export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await getSession();
+  const session = await getActiveSession();
   await dbConnect();
 
   const [statusAgg, totalEmployees, recent, upcoming] = await Promise.all([

@@ -80,22 +80,34 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Attribute-safe URL for href — only http(s) schemes are allowed. */
+function safeHref(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return escapeHtml(parsed.toString());
+  } catch {
+    return null;
+  }
+}
+
 /** Render a simple, email-client-friendly branded HTML document. */
 export function renderEmail(t: EmailTemplate): string {
   const intro = t.intro
-    ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">${t.intro}</p>`
+    ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(t.intro)}</p>`
     : "";
   const body = t.bodyHtml ?? "";
+  const href = t.ctaUrl ? safeHref(t.ctaUrl) : null;
   const cta =
-    t.ctaLabel && t.ctaUrl
+    t.ctaLabel && href
       ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;">
            <tr><td style="border-radius:8px;background:${BRAND};">
-             <a href="${t.ctaUrl}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(t.ctaLabel)}</a>
+             <a href="${href}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(t.ctaLabel)}</a>
            </td></tr>
          </table>`
       : "";
   const footer = t.footerNote
-    ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;">${t.footerNote}</p>`
+    ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;">${escapeHtml(t.footerNote)}</p>`
     : "";
 
   return `<!doctype html>

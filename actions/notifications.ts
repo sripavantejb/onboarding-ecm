@@ -28,6 +28,22 @@ export async function getAdminNotifications(limit = 20): Promise<{
   return { items: plain(items) as unknown as NotificationDTO[], unread };
 }
 
+/**
+ * Layout-safe variant: never throws. A Mongo blip must not take down the entire
+ * admin shell — pages still render with an empty notification bell.
+ */
+export async function getAdminNotificationsSafe(limit = 20): Promise<{
+  items: NotificationDTO[];
+  unread: number;
+}> {
+  try {
+    return await getAdminNotifications(limit);
+  } catch (err) {
+    console.error("Admin notifications unavailable:", err);
+    return { items: [], unread: 0 };
+  }
+}
+
 export async function markNotificationRead(id: string) {
   await requireUser();
   await dbConnect();

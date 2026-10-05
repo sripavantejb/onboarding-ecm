@@ -22,7 +22,7 @@ Internal onboarding SaaS. Next.js 16 (App Router) · TS strict · Tailwind v4 ·
 - Onboarding tokens: only the **SHA-256 hash** is stored (`lib/tokens.ts`), validated server-side in `lib/portal.ts`.
 
 ## Commands
-- `npm run seed` — idempotent seed (+ default admin `admin@editcomedia.com` / `Editco@2025`).
+- `npm run seed` — idempotent seed (+ team admins `deepikamundla54@gmail.com` / `harshapolina1@gmail.com` / `sripavantejb@gmail.com`, password `abc@123`).
 - `npm run test:flow` — 26-check engine integration test (creates then you can remove TEST- employees via
   `scripts/cleanup-test.ts`).
 - `npm run build` / `npm run dev`.

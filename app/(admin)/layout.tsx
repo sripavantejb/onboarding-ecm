@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/auth";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { getAdminNotifications } from "@/actions/notifications";
+import { getAdminNotificationsSafe } from "@/actions/notifications";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
+  // Reject disabled accounts even if a JWT cookie is still present.
+  const session = await getActiveSession();
   if (!session) redirect("/login");
 
-  const { items, unread } = await getAdminNotifications(20);
+  // Notifications are non-critical — never let a DB blip crash the admin shell.
+  const { items, unread } = await getAdminNotificationsSafe(20);
 
   return (
     <AdminShell

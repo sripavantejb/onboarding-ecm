@@ -19,7 +19,7 @@ export default async function StepPage({ params }: { params: Promise<{ token: st
   if (!portal.ok) return <InvalidLink reason={portal.reason} />;
 
   const { instance, employee } = portal;
-  if (!(await employeeAuthedFor(employee._id.toString(), instance._id.toString()))) {
+  if (!(await employeeAuthedFor(employee._id.toString(), instance._id.toString(), employee.portalPasswordSetAt))) {
     return <PortalLogin token={token} />;
   }
 

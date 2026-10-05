@@ -36,7 +36,7 @@ export async function approveDocument(submissionId: string): Promise<ActionResul
       audience: "employee", type: "document.approved", title: "Document approved",
       message: `Your “${sub.documentName}” was approved.`, employee: sub.employee, instance: sub.instance,
       email: {
-        heading: "Document approved ✅",
+        heading: "Document approved",
         intro: `Good news — your “${sub.documentName}” has been reviewed and approved. No further action is needed for this item.`,
         footerNote: "Sign in to your onboarding portal to continue with any remaining steps.",
       },

@@ -210,7 +210,7 @@ export async function assignPolicyToEmployee(
       employee: instance.employee, instance: instance._id,
       email: {
         to: employee.email,
-        heading: "A new policy needs your signature ✍️",
+        heading: "A new policy needs your signature",
         intro: `A new policy — “${policy.title}” — has been added to your onboarding for you to read and acknowledge.`,
         footerNote: "Sign in to your onboarding portal to review and sign this policy.",
       },

@@ -16,8 +16,8 @@ import { defaultExpiry } from "@/lib/onboarding-links";
 
 let pass = 0, fail = 0;
 function check(label: string, cond: boolean) {
-  if (cond) { pass++; console.log(`  ✓ ${label}`); }
-  else { fail++; console.log(`  ✗ ${label}`); }
+  if (cond) { pass++; console.log(`  [ok] ${label}`); }
+  else { fail++; console.log(`  [fail] ${label}`); }
 }
 
 async function makeEmployee(name: string, deptId: mongoose.Types.ObjectId, roleId: mongoose.Types.ObjectId, deptName: string, roleName: string) {

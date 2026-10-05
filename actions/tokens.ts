@@ -97,8 +97,12 @@ export async function sendInvitation(instanceId: string): Promise<ActionResult<{
 
     const employee = await Employee.findById(instance.employee);
     if (!employee) return fail("Employee not found.");
+    if (employee.status !== "active") {
+      return fail("Cannot invite an employee who is not active.");
+    }
 
     // Fresh portal password (only the hash is stored) so we can email real creds.
+    // Advancing portalPasswordSetAt also invalidates any existing portal sessions.
     const portalPassword = generatePassword();
     employee.portalPasswordHash = await hashPassword(portalPassword);
     employee.portalPasswordSetAt = new Date();
@@ -124,7 +128,7 @@ export async function sendInvitation(instanceId: string): Promise<ActionResult<{
     await instance.save();
 
     const firstName = employee.fullName.split(" ")[0] || "there";
-    await notify({
+    const { emailed } = await notify({
       audience: "employee",
       type: "invitation",
       title: "Your Editco onboarding is ready",
@@ -134,7 +138,7 @@ export async function sendInvitation(instanceId: string): Promise<ActionResult<{
       email: {
         to: employee.email,
         subject: "Welcome to Editco — start your onboarding",
-        heading: `Welcome to Editco, ${firstName}! 👋`,
+        heading: `Welcome to Editco, ${firstName}!`,
         intro:
           "Your onboarding portal is ready. Use the button below to open your secure onboarding link, then sign in with the credentials shown here.",
         bodyHtml: infoBox([
@@ -150,11 +154,18 @@ export async function sendInvitation(instanceId: string): Promise<ActionResult<{
 
     await logActivity({
       actorType: "admin", actorName: user.name, action: "invitation.sent",
-      message: `Invitation emailed to ${employee.fullName} (${employee.email})`,
+      message: emailed
+        ? `Invitation emailed to ${employee.fullName} (${employee.email})`
+        : `Invitation prepared for ${employee.fullName} (${employee.email}) — email not sent`,
       employee: employee._id, instance: instance._id,
     });
 
     revalidatePath(`/employees/${instance.employee}`);
-    return ok({ url }, `Invitation emailed to ${employee.email}`);
+    return ok(
+      { url },
+      emailed
+        ? `Invitation emailed to ${employee.email}`
+        : `Link ready for ${employee.email} (email not sent — check SMTP settings)`,
+    );
   });
 }

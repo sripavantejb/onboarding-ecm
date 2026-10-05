@@ -2,6 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { env } from "@/lib/env";
+import { dbConnect } from "@/lib/db";
+import { User } from "@/models/User";
 import type { UserRole } from "@/types";
 
 const COOKIE_NAME = "editco_session";
@@ -52,7 +54,31 @@ export async function getSession(): Promise<SessionPayload | null> {
   }
 }
 
+/**
+ * JWT session that is still backed by an active User row. Prefer this over
+ * getSession() for layout/auth gates so disabled accounts lose access immediately.
+ * On a transient DB failure, falls back to the JWT so a blip does not log everyone out.
+ */
+export async function getActiveSession(): Promise<SessionPayload | null> {
+  const session = await getSession();
+  if (!session) return null;
+  try {
+    await dbConnect();
+    const dbUser = await User.findById(session.uid).select("status role name email").lean();
+    if (!dbUser || dbUser.status !== "active") return null;
+    return {
+      uid: session.uid,
+      name: dbUser.name,
+      email: dbUser.email,
+      role: dbUser.role as UserRole,
+    };
+  } catch (err) {
+    console.error("getActiveSession: status check failed, falling back to JWT:", err);
+    return session;
+  }
+}
+
 export async function destroySession(): Promise<void> {
   const store = await cookies();
-  store.delete(COOKIE_NAME);
+  store.delete({ name: COOKIE_NAME, path: "/" });
 }

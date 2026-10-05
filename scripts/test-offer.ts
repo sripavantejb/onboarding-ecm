@@ -16,7 +16,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { defaultExpiry } from "@/lib/onboarding-links";
 
 let pass = 0, fail = 0;
-const check = (l: string, c: boolean) => { c ? (pass++, console.log(`  ✓ ${l}`)) : (fail++, console.log(`  ✗ ${l}`)); };
+const check = (l: string, c: boolean) => { c ? (pass++, console.log(`  [ok] ${l}`)) : (fail++, console.log(`  [fail] ${l}`)); };
 
 async function portalCookie(eid: string, iid: string, name: string) {
   const jwt = await new SignJWT({ eid, iid, name })

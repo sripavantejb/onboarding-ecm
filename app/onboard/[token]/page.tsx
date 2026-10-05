@@ -49,7 +49,11 @@ export default async function PortalHome({ params }: { params: Promise<{ token: 
   const { instance, employee } = portal;
 
   // Require the employee to sign in with the admin-set password.
-  const authed = await employeeAuthedFor(employee._id.toString(), instance._id.toString());
+  const authed = await employeeAuthedFor(
+    employee._id.toString(),
+    instance._id.toString(),
+    employee.portalPasswordSetAt,
+  );
   if (!authed) return <PortalLogin token={token} />;
 
   await touchPortalAccess(portal.token, portal.instance);
@@ -83,7 +87,7 @@ export default async function PortalHome({ params }: { params: Promise<{ token: 
         {/* Welcome */}
         <div className="space-y-1">
           <p className="text-sm font-medium text-brand">Welcome to Editco</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hi {firstName} 👋</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hi {firstName}</h1>
           <p className="text-sm text-muted-foreground">
             This is your personal onboarding. Work through each step — we&apos;ll always show you what&apos;s next.
           </p>
@@ -112,7 +116,7 @@ export default async function PortalHome({ params }: { params: Promise<{ token: 
                 <PartyPopper className="h-6 w-6 text-success" />
               </div>
               <div>
-                <p className="font-semibold">You&apos;ve completed onboarding 🎉</p>
+                <p className="font-semibold">You&apos;ve completed onboarding</p>
                 <p className="text-sm text-muted-foreground">Welcome aboard, {firstName}! Your team will take it from here.</p>
               </div>
             </CardContent>

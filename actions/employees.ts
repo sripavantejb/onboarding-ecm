@@ -30,7 +30,10 @@ const createSchema = z.object({
   phone: z.string().max(30).optional().default(""),
   department: z.string().min(1, "Department is required"),
   role: z.string().min(1, "Role is required"),
+  /** Optional User id — when set, name is resolved from that account. */
   reportingManager: z.string().optional().default(""),
+  /** Display name of the reporting person (required). */
+  reportingManagerName: z.string().min(2, "Reporting manager name is required").max(120),
   joiningDate: z.string().min(1, "Joining date is required"),
   employmentType: z.enum(EMPLOYMENT_TYPES),
   workMode: z.enum(WORK_MODES),
@@ -61,12 +64,17 @@ export async function createEmployeeAndGenerate(
     if (role.department.toString() !== dept._id.toString())
       return fail("That role does not belong to the selected department.");
 
-    let managerName = "";
+    let managerName = d.reportingManagerName.trim();
     let managerId: string | null = null;
     if (d.reportingManager) {
-      const mgr = await User.findById(d.reportingManager).select("name").lean().catch(() => null);
-      if (mgr) { managerName = mgr.name; managerId = String(mgr._id); }
+      const mgr = await User.findById(d.reportingManager).select("name status").lean().catch(() => null);
+      if (mgr && mgr.status === "active") {
+        managerId = String(mgr._id);
+        // Prefer the typed/selected display name; fall back to the user record.
+        if (!managerName) managerName = mgr.name;
+      }
     }
+    if (!managerName) return fail("Reporting manager name is required.");
 
     // Auto-generate the employee's portal password (admin can reset it later).
     const portalPassword = generatePassword();
@@ -150,9 +158,11 @@ export async function createEmployeeAndGenerate(
 const updateSchema = z.object({
   fullName: z.string().min(2, "Full name is required").max(120),
   email: z.string().email("Enter a valid email"),
+  reportingManager: z.string().optional().default(""),
+  reportingManagerName: z.string().min(2, "Reporting manager name is required").max(120),
 });
 
-/** Edit an employee's basic details (name, email). Keeps denormalized copies in sync. */
+/** Edit an employee's basic details (name, email, reporting manager). Keeps denormalized copies in sync. */
 export async function updateEmployee(
   employeeId: string,
   input: unknown,
@@ -168,6 +178,7 @@ export async function updateEmployee(
 
     const previousName = employee.fullName;
     const previousEmail = employee.email;
+    const previousManager = employee.reportingManagerName ?? "";
     const nextEmail = parsed.data.email.toLowerCase().trim();
 
     // Email is the portal login identity — don't let two employees share one.
@@ -176,8 +187,20 @@ export async function updateEmployee(
       if (clash) return fail("Another employee already uses that email.");
     }
 
+    let managerName = parsed.data.reportingManagerName.trim();
+    employee.reportingManager = null;
+    if (parsed.data.reportingManager) {
+      const mgr = await User.findById(parsed.data.reportingManager).select("name status").lean().catch(() => null);
+      if (mgr && mgr.status === "active") {
+        employee.reportingManager = mgr._id;
+        if (!managerName) managerName = mgr.name;
+      }
+    }
+    if (!managerName) return fail("Reporting manager name is required.");
+
     employee.fullName = parsed.data.fullName.trim();
     employee.email = nextEmail;
+    employee.reportingManagerName = managerName;
     await employee.save();
 
     // Onboarding instances snapshot the name for fast lists — keep it consistent.
@@ -191,6 +214,7 @@ export async function updateEmployee(
     const changes: string[] = [];
     if (previousName !== employee.fullName) changes.push(`name “${previousName}” → “${employee.fullName}”`);
     if (previousEmail !== nextEmail) changes.push(`email ${previousEmail} → ${nextEmail}`);
+    if (previousManager !== managerName) changes.push(`manager “${previousManager || "none"}” → “${managerName}”`);
     await logActivity({
       actorType: "admin", actorName: user.name, action: "employee.updated",
       message: `Updated employee ${changes.join(", ") || "details"}`,

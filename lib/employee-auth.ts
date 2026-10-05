@@ -7,6 +7,10 @@ import { env } from "@/lib/env";
  * Employee portal session — separate from the admin session. Scoped to one
  * employee + onboarding instance. Combined with the secret link token, this
  * means documents are protected by an admin-set password, not just the URL.
+ *
+ * `pwdAt` is the portalPasswordSetAt timestamp at login time. When an admin
+ * resets the password, portalPasswordSetAt advances and older sessions fail
+ * `employeeAuthedFor` until the employee signs in again.
  */
 
 const COOKIE_NAME = "editco_portal";
@@ -17,6 +21,8 @@ export interface EmployeeSession {
   eid: string; // employee id
   iid: string; // instance id
   name: string;
+  /** ms timestamp of portalPasswordSetAt when the session was issued */
+  pwdAt: number;
 }
 
 function key(): Uint8Array {
@@ -46,7 +52,12 @@ export async function getEmployeeSession(): Promise<EmployeeSession | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key(), { audience: AUDIENCE });
-    return { eid: String(payload.eid), iid: String(payload.iid), name: String(payload.name) };
+    return {
+      eid: String(payload.eid),
+      iid: String(payload.iid),
+      name: String(payload.name),
+      pwdAt: typeof payload.pwdAt === "number" ? payload.pwdAt : 0,
+    };
   } catch {
     return null;
   }
@@ -54,11 +65,23 @@ export async function getEmployeeSession(): Promise<EmployeeSession | null> {
 
 export async function destroyEmployeeSession(): Promise<void> {
   const store = await cookies();
-  store.delete(COOKIE_NAME);
+  store.delete({ name: COOKIE_NAME, path: "/" });
 }
 
-/** True only when the current portal session matches this employee + instance. */
-export async function employeeAuthedFor(eid: string, iid: string): Promise<boolean> {
+/**
+ * True only when the current portal session matches this employee + instance
+ * and was issued at/after the latest password set time (so resets invalidate).
+ */
+export async function employeeAuthedFor(
+  eid: string,
+  iid: string,
+  passwordSetAt?: Date | null,
+): Promise<boolean> {
   const session = await getEmployeeSession();
-  return !!session && session.eid === eid && session.iid === iid;
+  if (!session || session.eid !== eid || session.iid !== iid) return false;
+  if (passwordSetAt) {
+    const current = new Date(passwordSetAt).getTime();
+    if (current > 0 && session.pwdAt < current) return false;
+  }
+  return true;
 }

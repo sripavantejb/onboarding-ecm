@@ -118,7 +118,7 @@ async function notifyOfferReady(
     employee: employeeId as never, instance: instanceId as never,
     email: {
       to: email,
-      heading: "Your offer letter is ready 🎉",
+      heading: "Your offer letter is ready",
       intro: "Your official Editco offer letter is now available in your onboarding portal. Sign in to review, download, and accept it.",
       footerNote: "Sign in to your onboarding portal to view and accept your offer.",
     },

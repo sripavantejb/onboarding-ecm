@@ -48,7 +48,7 @@ export async function setEmployeePortalPassword(
       employee: employee._id, instance: employee.instance,
       email: {
         to: employee.email,
-        heading: "Your portal password was updated 🔑",
+        heading: "Your portal password was updated",
         intro: "Your Editco onboarding portal password has been reset. Use the credentials below to sign in via your onboarding link.",
         bodyHtml: infoBox([
           { label: "Portal email", value: employee.email, mono: true },

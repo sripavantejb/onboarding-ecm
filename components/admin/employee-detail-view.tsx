@@ -25,7 +25,7 @@ import { CopyButton } from "@/components/copy-button";
 import { OnboardingStatusBadge, StepStatusBadge, DocStatusBadge } from "@/components/status-badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatDate, formatDateTime, timeAgo, cn } from "@/lib/utils";
-import { SECTION_LABELS, type StepSection, type StepStatus, type OnboardingStatus, type DocStatus } from "@/types";
+import { ROLE_LABELS, SECTION_LABELS, type StepSection, type StepStatus, type OnboardingStatus, type DocStatus, type UserRole } from "@/types";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -38,10 +38,18 @@ import { addNote } from "@/actions/notes";
 import { issueOfferLetter, revokeOfferLetter, uploadOfferLetter } from "@/actions/offer";
 import { setEmployeePortalPassword } from "@/actions/employee-access";
 
+export interface ManagerOption {
+  _id: string;
+  name: string;
+  role: UserRole;
+}
+
 export interface EmployeeDetail {
   employee: {
     _id: string; fullName: string; email: string; phone: string; employeeCode: string;
-    department: string; role: string; reportingManagerName: string; joiningDate: string;
+    department: string; role: string;
+    reportingManager: string;
+    reportingManagerName: string; joiningDate: string;
     employmentType: string; workMode: string; profile: Record<string, unknown>;
     passwordSetAt: string | null;
     employmentStatus: "active" | "archived" | "past";
@@ -80,7 +88,13 @@ export interface EmployeeDetail {
 
 const SECTION_SEQUENCE: StepSection[] = ["CORE", "ROLE", "DOCUMENTS", "POLICIES", "TRAINING", "ASSESSMENT", "FINAL"];
 
-export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
+export function EmployeeDetailView({
+  detail,
+  managers = [],
+}: {
+  detail: EmployeeDetail;
+  managers?: ManagerOption[];
+}) {
   const { employee, instance, link } = detail;
 
   const isPast = employee.employmentStatus === "past";
@@ -112,7 +126,14 @@ export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-semibold tracking-tight">{employee.fullName}</h1>
                   {instance && <OnboardingStatusBadge status={instance.status} />}
-                  <EditEmployeeButton employeeId={employee._id} fullName={employee.fullName} email={employee.email} />
+                  <EditEmployeeButton
+                    employeeId={employee._id}
+                    fullName={employee.fullName}
+                    email={employee.email}
+                    reportingManager={employee.reportingManager}
+                    reportingManagerName={employee.reportingManagerName}
+                    managers={managers}
+                  />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5"><BriefcaseBusiness className="h-3.5 w-3.5" /> {employee.role}</span>
@@ -177,18 +198,41 @@ export function EmployeeDetailView({ detail }: { detail: EmployeeDetail }) {
 
 /* ------------------------------ Edit details ----------------------------- */
 
-function EditEmployeeButton({ employeeId, fullName, email }: { employeeId: string; fullName: string; email: string }) {
+function EditEmployeeButton({
+  employeeId, fullName, email, reportingManager, reportingManagerName, managers,
+}: {
+  employeeId: string;
+  fullName: string;
+  email: string;
+  reportingManager: string;
+  reportingManagerName: string;
+  managers: ManagerOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState(fullName);
   const [mail, setMail] = React.useState(email);
+  const [managerId, setManagerId] = React.useState(reportingManager);
+  const [managerName, setManagerName] = React.useState(reportingManagerName);
   const [pending, start] = React.useTransition();
 
-  React.useEffect(() => { if (open) { setName(fullName); setMail(email); } }, [open, fullName, email]);
+  React.useEffect(() => {
+    if (open) {
+      setName(fullName);
+      setMail(email);
+      setManagerId(reportingManager);
+      setManagerName(reportingManagerName);
+    }
+  }, [open, fullName, email, reportingManager, reportingManagerName]);
 
   function save() {
     start(async () => {
-      const res = await updateEmployee(employeeId, { fullName: name, email: mail });
+      const res = await updateEmployee(employeeId, {
+        fullName: name,
+        email: mail,
+        reportingManager: managerId,
+        reportingManagerName: managerName,
+      });
       if (res.ok) { toast.success(res.message); setOpen(false); router.refresh(); }
       else toast.error(res.error);
     });
@@ -198,7 +242,7 @@ function EditEmployeeButton({ employeeId, fullName, email }: { employeeId: strin
     <>
       <Button
         variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
-        onClick={() => setOpen(true)} aria-label="Edit employee name"
+        onClick={() => setOpen(true)} aria-label="Edit employee"
       >
         <Pencil className="h-3.5 w-3.5" />
       </Button>
@@ -206,7 +250,7 @@ function EditEmployeeButton({ employeeId, fullName, email }: { employeeId: strin
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit employee</DialogTitle>
-            <DialogDescription>Update the employee&apos;s name and login email.</DialogDescription>
+            <DialogDescription>Update name, login email, and reporting manager.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -224,9 +268,42 @@ function EditEmployeeButton({ employeeId, fullName, email }: { employeeId: strin
               />
               <p className="text-[11px] text-muted-foreground">Used to sign in to the portal and to receive onboarding emails.</p>
             </div>
+            <div className="space-y-1.5">
+              <Label>Reporting manager</Label>
+              <Select
+                value={managerId || "custom"}
+                onValueChange={(v) => {
+                  if (v === "custom") {
+                    setManagerId("");
+                    return;
+                  }
+                  const mgr = managers.find((m) => m._id === v);
+                  setManagerId(v);
+                  if (mgr) setManagerName(mgr.name);
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Pick a teammate or type a name" /></SelectTrigger>
+                <SelectContent>
+                  {managers.map((m) => (
+                    <SelectItem key={m._id} value={m._id}>{m.name} · {ROLE_LABELS[m.role]}</SelectItem>
+                  ))}
+                  <SelectItem value="custom">Someone else (type name)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                value={managerName}
+                onChange={(e) => setManagerName(e.target.value)}
+                placeholder="Reporting manager full name"
+                onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-              <Button variant="brand" onClick={save} disabled={pending || name.trim().length < 2 || !mail.trim()}>
+              <Button
+                variant="brand"
+                onClick={save}
+                disabled={pending || name.trim().length < 2 || !mail.trim() || managerName.trim().length < 2}
+              >
                 {pending ? "Saving…" : "Save changes"}
               </Button>
             </div>

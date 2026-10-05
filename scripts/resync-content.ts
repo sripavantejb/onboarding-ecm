@@ -34,7 +34,7 @@ async function main() {
     }
     await content.save();
     updated++;
-    console.log(`  ✓ ${item.key}`);
+    console.log(`  [ok] ${item.key}`);
   }
   console.log(`\nUpdated ${updated} content item(s).`);
   await mongoose.disconnect();

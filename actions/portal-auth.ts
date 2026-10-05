@@ -34,6 +34,9 @@ export async function employeeLogin(token: string, input: unknown): Promise<Acti
       eid: employee._id.toString(),
       iid: instance._id.toString(),
       name: employee.fullName,
+      pwdAt: employee.portalPasswordSetAt
+        ? new Date(employee.portalPasswordSetAt).getTime()
+        : Date.now(),
     });
     await logActivity({
       actorType: "employee", actorName: employee.fullName, action: "portal.signin",

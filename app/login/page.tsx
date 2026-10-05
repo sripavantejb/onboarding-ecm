@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/auth";
 import { BrandMark } from "@/components/brand-mark";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
-  const session = await getSession();
+  const session = await getActiveSession();
   if (session) redirect("/dashboard");
 
   return (
