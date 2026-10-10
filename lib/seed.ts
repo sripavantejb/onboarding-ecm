@@ -15,10 +15,19 @@ import {
   OnboardingTemplate,
   OnboardingTemplateVersion,
 } from "@/models";
-import { DEPARTMENTS, SALES_TRACK_ROLE_SLUGS } from "@/lib/seed-org";
+import {
+  DEPARTMENTS,
+  SALES_TRACK_ROLE_SLUGS,
+  TECH_TRACK_ROLE_SLUGS,
+  DESIGN_TRACK_ROLE_SLUGS,
+  MARKETING_TRACK_ROLE_SLUGS,
+} from "@/lib/seed-org";
 import {
   CORE_CONTENT,
   SALES_CONTENT,
+  TECH_CONTENT,
+  DESIGN_CONTENT,
+  MARKETING_CONTENT,
   POLICIES,
   DOCUMENTS,
   TRAINING,
@@ -170,6 +179,9 @@ export async function runSeed(): Promise<SeedResult> {
   // ---- Content ------------------------------------------------------------
   const coreContentIds = await upsertContent(CORE_CONTENT);
   const salesContentIds = await upsertContent(SALES_CONTENT);
+  const techContentIds = await upsertContent(TECH_CONTENT);
+  const designContentIds = await upsertContent(DESIGN_CONTENT);
+  const marketingContentIds = await upsertContent(MARKETING_CONTENT);
 
   // ---- Policies -----------------------------------------------------------
   const policyIds = new Map<string, OID>();
@@ -325,6 +337,59 @@ export async function runSeed(): Promise<SeedResult> {
     });
   }
 
+  // ---- Technology ROLE onboarding template -------------------------------
+  const techItems: ITemplateItem[] = [];
+  let tOrder = 0;
+  for (const c of TECH_CONTENT) {
+    techItems.push({ kind: "content", ref: techContentIds.get(c.key)!, section: "ROLE", required: true, order: tOrder++ });
+  }
+  techItems.push({ kind: "training", ref: trainingIds.get("training-tech-fundamentals")!, section: "TRAINING", required: true, order: tOrder++ });
+  techItems.push({
+    kind: "assessment",
+    ref: assessmentIds.get("assessment-tech-fundamentals")!,
+    section: "ASSESSMENT",
+    required: true,
+    order: tOrder++,
+  });
+
+  const techDept = await Department.findOne({ slug: "technology" });
+  for (const slug of TECH_TRACK_ROLE_SLUGS) {
+    const roleId = roleIdBySlug.get(slug);
+    if (!roleId || !techDept) continue;
+    await upsertTemplate({
+      scope: "ROLE",
+      name: `Technology Track — ${slug}`,
+      items: techItems,
+      department: techDept._id,
+      role: roleId,
+    });
+  }
+
+  await attachRoleTrack({
+    label: "Design",
+    deptSlug: "design",
+    roleSlugs: DESIGN_TRACK_ROLE_SLUGS,
+    content: DESIGN_CONTENT,
+    contentIds: designContentIds,
+    trainingKey: "training-design-fundamentals",
+    assessmentKey: "assessment-design-fundamentals",
+    roleIdBySlug,
+    trainingIds,
+    assessmentIds,
+  });
+  await attachRoleTrack({
+    label: "Marketing",
+    deptSlug: "marketing",
+    roleSlugs: MARKETING_TRACK_ROLE_SLUGS,
+    content: MARKETING_CONTENT,
+    contentIds: marketingContentIds,
+    trainingKey: "training-marketing-fundamentals",
+    assessmentKey: "assessment-marketing-fundamentals",
+    roleIdBySlug,
+    trainingIds,
+    assessmentIds,
+  });
+
   const counts = {
     departments: await Department.countDocuments(),
     roles: await Role.countDocuments(),
@@ -343,6 +408,45 @@ export async function runSeed(): Promise<SeedResult> {
     admins,
     counts,
   };
+}
+
+async function attachRoleTrack(input: {
+  label: string;
+  deptSlug: string;
+  roleSlugs: string[];
+  content: SeedContent[];
+  contentIds: Map<string, OID>;
+  trainingKey: string;
+  assessmentKey: string;
+  roleIdBySlug: Map<string, OID>;
+  trainingIds: Map<string, OID>;
+  assessmentIds: Map<string, OID>;
+}) {
+  const items: ITemplateItem[] = [];
+  let order = 0;
+  for (const c of input.content) {
+    items.push({ kind: "content", ref: input.contentIds.get(c.key)!, section: "ROLE", required: true, order: order++ });
+  }
+  items.push({ kind: "training", ref: input.trainingIds.get(input.trainingKey)!, section: "TRAINING", required: true, order: order++ });
+  items.push({
+    kind: "assessment",
+    ref: input.assessmentIds.get(input.assessmentKey)!,
+    section: "ASSESSMENT",
+    required: true,
+    order: order++,
+  });
+  const dept = await Department.findOne({ slug: input.deptSlug });
+  for (const slug of input.roleSlugs) {
+    const roleId = input.roleIdBySlug.get(slug);
+    if (!roleId || !dept) continue;
+    await upsertTemplate({
+      scope: "ROLE",
+      name: `${input.label} Track — ${slug}`,
+      items,
+      department: dept._id,
+      role: roleId,
+    });
+  }
 }
 
 async function upsertTemplate(input: {

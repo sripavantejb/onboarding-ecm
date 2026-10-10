@@ -3,7 +3,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { dbConnect } from "@/lib/db";
 import {
-  Employee, Department, Role, OnboardingInstance, OnboardingStep, OnboardingToken, User, Review,
+  Employee, Department, Role, OnboardingInstance, OnboardingStep, OnboardingToken, User, Review, HireDraft,
 } from "@/models";
 import { requireCapability } from "@/lib/authz";
 import { ok, fail, guard, type ActionResult } from "@/lib/action-result";
@@ -50,6 +50,7 @@ async function generateEmployeeCode(): Promise<string> {
 
 export async function createEmployeeAndGenerate(
   input: unknown,
+  draftId?: string,
 ): Promise<ActionResult<{ employeeId: string; instanceId: string; url: string; name: string; department: string; role: string; email: string; password: string }>> {
   return guard(async () => {
     const user = await requireCapability("employees");
@@ -136,6 +137,8 @@ export async function createEmployeeAndGenerate(
       message: `${employee.fullName} — ${role.title}, ${dept.name}`,
       employee: employee._id, instance: instance._id, link: `/employees/${employee._id}`,
     });
+
+    if (draftId) await HireDraft.findByIdAndDelete(draftId).catch(() => null);
 
     revalidatePath("/employees");
     revalidatePath("/dashboard");

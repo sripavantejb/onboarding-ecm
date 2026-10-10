@@ -9,14 +9,14 @@
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/db";
 import { Content, ContentVersion } from "@/models/Content";
-import { CORE_CONTENT, SALES_CONTENT } from "@/lib/seed-content";
+import { CORE_CONTENT, SALES_CONTENT, TECH_CONTENT, DESIGN_CONTENT, MARKETING_CONTENT } from "@/lib/seed-content";
 import { sanitizeRichText } from "@/lib/sanitize";
 
 const COMPANY_KEYS = ["welcome-to-editco", "about-editco", "editco-101", "editco-way", "communication", "confidentiality"];
 
 async function main() {
   await dbConnect();
-  const all = [...CORE_CONTENT, ...SALES_CONTENT];
+  const all = [...CORE_CONTENT, ...SALES_CONTENT, ...TECH_CONTENT, ...DESIGN_CONTENT, ...MARKETING_CONTENT];
   const scopeAll = process.argv.includes("all");
   const targets = scopeAll ? all : all.filter((c) => COMPANY_KEYS.includes(c.key));
 

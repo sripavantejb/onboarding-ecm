@@ -152,7 +152,7 @@ export function PolicyEditorView({ data }: { data: PolicyEditorData }) {
               <TabsTrigger value="edit"><FileEdit className="mr-1.5 h-4 w-4" /> Edit</TabsTrigger>
               <TabsTrigger value="preview"><Eye className="mr-1.5 h-4 w-4" /> Preview</TabsTrigger>
             </TabsList>
-            <TabsContent value="edit">
+            <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
               <RichEditor value={body} onChange={markDirty(setBody)} />
             </TabsContent>
             <TabsContent value="preview">

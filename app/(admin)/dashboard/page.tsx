@@ -4,7 +4,9 @@ import {
 } from "lucide-react";
 import { getActiveSession } from "@/lib/auth";
 import { dbConnect } from "@/lib/db";
-import { Employee, OnboardingInstance } from "@/models";
+import { Employee, OnboardingInstance, Review } from "@/models";
+import { sendStallReminders } from "@/lib/stall-reminders";
+import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +25,15 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const session = await getActiveSession();
   await dbConnect();
+  await sendStallReminders().catch((err) => console.error("stall reminders failed", err));
 
-  const [statusAgg, totalEmployees, recent, upcoming] = await Promise.all([
+  const reviewSoon = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  const reviewQuery: Record<string, unknown> = {
+    status: "pending",
+    dueDate: { $lte: reviewSoon },
+  };
+
+  const [statusAgg, totalEmployees, recent, upcoming, dueReviews] = await Promise.all([
     OnboardingInstance.aggregate<{ _id: OnboardingStatus; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
@@ -41,7 +50,25 @@ export default async function DashboardPage() {
       .sort({ joiningDate: 1 })
       .limit(5)
       .lean(),
+    Review.find(reviewQuery)
+      .populate<{ employee: { _id: string; fullName: string; reportingManager?: string } }>(
+        "employee",
+        "fullName reportingManager",
+      )
+      .sort({ dueDate: 1 })
+      .limit(12)
+      .lean(),
   ]);
+
+  const managerOnly = session?.role === "MANAGER";
+  const reviewsDue = dueReviews
+    .filter((r) => {
+      const emp = r.employee as { reportingManager?: { toString(): string } | string } | null;
+      if (!managerOnly) return Boolean(emp);
+      const managerId = emp?.reportingManager ? String(emp.reportingManager) : "";
+      return managerId === session?.uid;
+    })
+    .slice(0, 6);
 
   const counts: Record<string, number> = {};
   for (const s of statusAgg) counts[s._id] = s.count;
@@ -117,6 +144,41 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
+        <div className="space-y-5">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-sm"><CalendarDays className="h-4 w-4" /> Reviews due</CardTitle>
+            <Button asChild variant="ghost" size="sm"><Link href="/reviews">All <ArrowRight className="h-3.5 w-3.5" /></Link></Button>
+          </CardHeader>
+          <CardContent>
+            {reviewsDue.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No 30/60/90 reviews due in the next two weeks.</p>
+            ) : (
+              <ul className="space-y-3">
+                {reviewsDue.map((r) => {
+                  const emp = r.employee as { _id?: string; fullName?: string } | null;
+                  const started = [r.goals, r.performance, r.strengths, r.improvements, r.feedback, r.nextObjectives, r.managerComments]
+                    .some((v) => typeof v === "string" && v.trim().length > 0);
+                  const overdue = new Date(r.dueDate).getTime() < Date.now();
+                  return (
+                    <li key={String(r._id)}>
+                      <Link href={`/employees/${emp?._id}?tab=reviews`} className="flex items-center gap-3 rounded-md p-1.5 hover:bg-muted/40">
+                        <UserAvatar name={emp?.fullName ?? "Review"} className="h-8 w-8" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{emp?.fullName ?? "Employee"}</p>
+                          <p className="truncate text-xs text-muted-foreground">{r.type}-day · {formatDate(r.dueDate)}</p>
+                        </div>
+                        <Badge variant={overdue ? "destructive" : started ? "brand" : "warning"}>
+                          {overdue ? "Overdue" : started ? "Draft" : "Due"}
+                        </Badge>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><CalendarDays className="h-4 w-4" /> Upcoming joiners</CardTitle></CardHeader>
           <CardContent>
@@ -140,6 +202,7 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

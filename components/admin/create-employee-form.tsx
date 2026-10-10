@@ -21,6 +21,7 @@ import { CopyButton } from "@/components/copy-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EMPLOYMENT_TYPES, WORK_MODES, ROLE_LABELS } from "@/types";
 import { createEmployeeAndGenerate, getOnboardingPreview } from "@/actions/employees";
+import { discardHireDraft, saveHireDraft } from "@/actions/hire-drafts";
 import { sendInvitation } from "@/actions/tokens";
 import type { OnboardingPreview } from "@/lib/onboarding";
 
@@ -49,6 +50,20 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+export interface HireDraftValues {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  department: string;
+  role: string;
+  reportingManager: string;
+  reportingManagerName: string;
+  joiningDate: string;
+  employmentType: FormValues["employmentType"];
+  workMode: FormValues["workMode"];
+}
+
 interface SuccessData {
   employeeId: string;
   instanceId: string;
@@ -61,25 +76,34 @@ interface SuccessData {
 }
 
 export function CreateEmployeeForm({
-  departments, managers,
+  departments, managers, draft,
 }: {
   departments: DeptWithRoles[];
   managers: ManagerOption[];
+  draft?: HireDraftValues | null;
 }) {
   const router = useRouter();
   const [preview, setPreview] = React.useState<OnboardingPreview | null>(null);
   const [previewLoading, setPreviewLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [success, setSuccess] = React.useState<SuccessData | null>(null);
+  const [draftId, setDraftId] = React.useState(draft?.id ?? "");
 
   const {
-    register, handleSubmit, watch, setValue, formState: { errors },
+    register, handleSubmit, watch, setValue, getValues, formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      fullName: "", email: "", phone: "", department: "", role: "",
-      reportingManager: "", reportingManagerName: "",
-      joiningDate: "", employmentType: "Full-time", workMode: "On-site",
+      fullName: draft?.fullName ?? "",
+      email: draft?.email ?? "",
+      phone: draft?.phone ?? "",
+      department: draft?.department ?? "",
+      role: draft?.role ?? "",
+      reportingManager: draft?.reportingManager ?? "",
+      reportingManagerName: draft?.reportingManagerName ?? "",
+      joiningDate: draft?.joiningDate ?? "",
+      employmentType: draft?.employmentType ?? "Full-time",
+      workMode: draft?.workMode ?? "On-site",
     },
   });
 
@@ -103,7 +127,7 @@ export function CreateEmployeeForm({
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
-    const res = await createEmployeeAndGenerate(values);
+    const res = await createEmployeeAndGenerate(values, draftId || undefined);
     setSubmitting(false);
     if (res.ok && res.data) {
       toast.success(res.message);
@@ -113,13 +137,39 @@ export function CreateEmployeeForm({
     }
   }
 
+  async function onSaveDraft() {
+    setSubmitting(true);
+    const res = await saveHireDraft(getValues(), draftId || undefined);
+    setSubmitting(false);
+    if (res.ok && res.data) {
+      setDraftId(res.data.id);
+      toast.success(res.message);
+      router.replace(`/employees/new?draft=${res.data.id}`);
+    } else if (!res.ok) {
+      toast.error(res.error);
+    }
+  }
+
+  async function onDiscard() {
+    if (!draftId) return;
+    setSubmitting(true);
+    const res = await discardHireDraft(draftId);
+    setSubmitting(false);
+    if (res.ok) {
+      toast.success(res.message);
+      router.push("/employees?view=drafts");
+    } else toast.error(res.error);
+  }
+
   if (success) return <SuccessScreen data={success} onViewEmployee={() => router.push(`/employees/${success.employeeId}`)} />;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Create employee"
-        description="Enter the essentials — onboarding is generated automatically from the department and role."
+        description={draftId
+          ? "This hire is saved as a draft. Finish the details, then generate onboarding."
+          : "Enter the essentials — onboarding is generated when you confirm. Save a draft if you need to come back."}
         actions={<Button asChild variant="ghost"><Link href="/employees"><ArrowLeft /> Back</Link></Button>}
       />
 
@@ -212,8 +262,15 @@ export function CreateEmployeeForm({
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-end gap-2">
-            <Button asChild variant="outline"><Link href="/employees">Cancel</Link></Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {draftId ? (
+              <Button type="button" variant="ghost" onClick={onDiscard} disabled={submitting}>Discard draft</Button>
+            ) : (
+              <Button asChild variant="outline"><Link href="/employees">Cancel</Link></Button>
+            )}
+            <Button type="button" variant="outline" onClick={onSaveDraft} disabled={submitting}>
+              {submitting ? <Loader2 className="animate-spin" /> : null} Save draft
+            </Button>
             <Button type="submit" variant="brand" disabled={submitting}>
               {submitting ? <Loader2 className="animate-spin" /> : <UserPlus />}
               {submitting ? "Generating…" : "Create Employee & Generate Onboarding"}

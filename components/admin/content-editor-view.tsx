@@ -46,16 +46,38 @@ export function ContentEditorView({ data }: { data: ContentEditorData }) {
   const [dirty, setDirty] = React.useState(false);
   const [pending, start] = React.useTransition();
 
+  const storageKey = `editco-content-draft:${data._id}`;
   const categoryOptions = Array.from(new Set([...CONTENT_CATEGORIES, data.category]));
 
-  function markDirty<T>(setter: (v: T) => void) {
-    return (v: T) => { setter(v); setDirty(true); };
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { title?: string; category?: string; summary?: string; body?: string };
+      if (typeof saved.title === "string") setTitle(saved.title);
+      if (typeof saved.category === "string") setCategory(saved.category);
+      if (typeof saved.summary === "string") setSummary(saved.summary);
+      if (typeof saved.body === "string") setBody(saved.body);
+      setDirty(true);
+    } catch { /* ignore a bad local draft */ }
+  }, [storageKey]);
+
+  function remember(next: { title: string; category: string; summary: string; body: string }) {
+    try { sessionStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* private mode */ }
+  }
+  function forget() {
+    try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
+  }
+
+  function touch(patch: Partial<{ title: string; category: string; summary: string; body: string }>) {
+    setDirty(true);
+    remember({ title, category, summary, body, ...patch });
   }
 
   function save() {
     start(async () => {
       const res = await saveContentDraft(data._id, { title, category, summary, body });
-      if (res.ok) { toast.success(res.message); setDirty(false); router.refresh(); } else toast.error(res.error);
+      if (res.ok) { toast.success(res.message); setDirty(false); forget(); router.refresh(); } else toast.error(res.error);
     });
   }
   function publish() {
@@ -65,6 +87,7 @@ export function ContentEditorView({ data }: { data: ContentEditorData }) {
         const saveRes = await saveContentDraft(data._id, { title, category, summary, body });
         if (!saveRes.ok) { toast.error(saveRes.error); return; }
         setDirty(false);
+        forget();
       }
       const res = await publishContent(data._id);
       if (res.ok) { toast.success(res.message); router.refresh(); } else toast.error(res.error);
@@ -113,11 +136,11 @@ export function ContentEditorView({ data }: { data: ContentEditorData }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="title">Title</Label>
-                  <Input id="title" value={title} onChange={(e) => markDirty(setTitle)(e.target.value)} />
+                  <Input id="title" value={title} onChange={(e) => { setTitle(e.target.value); touch({ title: e.target.value }); }} />
                 </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={category} onValueChange={markDirty(setCategory)}>
+                  <Select value={category} onValueChange={(v) => { setCategory(v); touch({ category: v }); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {categoryOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -127,7 +150,7 @@ export function ContentEditorView({ data }: { data: ContentEditorData }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="summary">Summary</Label>
-                <Textarea id="summary" value={summary} onChange={(e) => markDirty(setSummary)(e.target.value)} className="min-h-0 h-16" />
+                <Textarea id="summary" value={summary} onChange={(e) => { setSummary(e.target.value); touch({ summary: e.target.value }); }} className="min-h-0 h-16" />
               </div>
             </CardContent>
           </Card>
@@ -137,8 +160,8 @@ export function ContentEditorView({ data }: { data: ContentEditorData }) {
               <TabsTrigger value="edit"><FileEdit className="mr-1.5 h-4 w-4" /> Edit</TabsTrigger>
               <TabsTrigger value="preview"><Eye className="mr-1.5 h-4 w-4" /> Preview</TabsTrigger>
             </TabsList>
-            <TabsContent value="edit">
-              <RichEditor value={body} onChange={markDirty(setBody)} />
+            <TabsContent value="edit" forceMount className="data-[state=inactive]:hidden">
+              <RichEditor value={body} onChange={(v) => { setBody(v); touch({ body: v }); }} />
             </TabsContent>
             <TabsContent value="preview">
               <Card><CardContent className="pt-5"><RichText html={body} /></CardContent></Card>

@@ -228,6 +228,59 @@ const infoSchema = z.object({
   }),
 });
 
+const optionalText = z.string().optional().default("");
+const infoDraftSchema = z.object({
+  personal: z.object({
+    dateOfBirth: optionalText, gender: optionalText, addressLine: optionalText,
+    city: optionalText, state: optionalText, postalCode: optionalText,
+    personalEmail: z.string().email("Enter a valid email").or(z.literal("")).optional().default(""),
+    altPhone: optionalText,
+  }),
+  emergencyContact: z.object({
+    name: optionalText, relationship: optionalText, phone: optionalText, email: optionalText,
+  }),
+  bank: z.object({
+    accountHolder: optionalText, bankName: optionalText,
+    accountNumber: optionalText, ifsc: optionalText, branch: optionalText,
+  }),
+});
+
+export async function saveInfoDraft(token: string, stepId: string, input: unknown): Promise<ActionResult> {
+  return guard(async () => {
+    await dbConnect();
+    const auth = await authorizeStep(token, stepId);
+    if ("error" in auth) return fail("This link is no longer valid.");
+    const { portal, step } = auth;
+    const parsed = infoDraftSchema.safeParse(input);
+    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Please check the form.");
+
+    const existing = (portal.employee.profile ?? {}) as { submittedAt?: Date | null };
+    await Employee.updateOne(
+      { _id: portal.employee._id },
+      {
+        $set: {
+          profile: {
+            ...parsed.data,
+            submittedAt: existing.submittedAt ?? null,
+            draftSavedAt: new Date(),
+          },
+        },
+      },
+    );
+    if (step.status === "not_started") {
+      step.status = "in_progress";
+      await step.save();
+      await recomputeInstance(step.instance);
+    }
+    await logActivity({
+      actorType: "employee", actorName: portal.employee.fullName, action: "profile.draft_saved",
+      message: "Saved a draft of employee information", employee: portal.employee._id, instance: portal.instance._id,
+    });
+    reval(token);
+    return ok(undefined, "Draft saved. You can come back and finish this later.");
+  });
+}
+
 export async function submitInfoForm(token: string, stepId: string, input: unknown): Promise<ActionResult> {
   return guard(async () => {
     await dbConnect();

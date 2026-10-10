@@ -10,6 +10,7 @@ export * from "./Training";
 export * from "./Assessment";
 export * from "./OnboardingTemplate";
 export * from "./Employee";
+export * from "./HireDraft";
 export * from "./OnboardingInstance";
 export * from "./OnboardingToken";
 export * from "./Review";

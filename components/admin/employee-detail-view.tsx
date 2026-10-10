@@ -88,12 +88,16 @@ export interface EmployeeDetail {
 
 const SECTION_SEQUENCE: StepSection[] = ["CORE", "ROLE", "DOCUMENTS", "POLICIES", "TRAINING", "ASSESSMENT", "FINAL"];
 
+const DETAIL_TABS = ["overview", "onboarding", "offer", "documents", "reviews", "activity", "notes"] as const;
+
 export function EmployeeDetailView({
   detail,
   managers = [],
+  initialTab = "onboarding",
 }: {
   detail: EmployeeDetail;
   managers?: ManagerOption[];
+  initialTab?: string;
 }) {
   const { employee, instance, link } = detail;
 
@@ -160,7 +164,7 @@ export function EmployeeDetailView({
       {instance ? (
         <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className="min-w-0">
-            <Tabs defaultValue="onboarding">
+            <Tabs defaultValue={DETAIL_TABS.includes(initialTab as (typeof DETAIL_TABS)[number]) ? initialTab : "onboarding"}>
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
@@ -691,8 +695,12 @@ function EmploymentCard({ employee }: { employee: EmployeeDetail["employee"] }) 
 function OverviewTab({ detail }: { detail: EmployeeDetail }) {
   const { employee } = detail;
   const p = employee.profile as {
-    personal?: Record<string, string>; emergencyContact?: Record<string, string>; bank?: Record<string, string>; submittedAt?: string;
+    personal?: Record<string, string>; emergencyContact?: Record<string, string>; bank?: Record<string, string>;
+    submittedAt?: string; draftSavedAt?: string;
   };
+  const hasProfile = [p?.personal, p?.emergencyContact, p?.bank].some((block) =>
+    Object.values(block ?? {}).some((v) => String(v ?? "").trim()),
+  );
   return (
     <div className="space-y-4">
       <Card>
@@ -708,11 +716,18 @@ function OverviewTab({ detail }: { detail: EmployeeDetail }) {
       <Card>
         <CardHeader><CardTitle className="text-sm">Submitted information</CardTitle></CardHeader>
         <CardContent>
-          {p?.submittedAt ? (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <ProfileBlock title="Personal" data={p.personal} />
-              <ProfileBlock title="Emergency contact" data={p.emergencyContact} />
-              <ProfileBlock title="Bank details" data={p.bank} mask />
+          {hasProfile ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                {p?.submittedAt
+                  ? `Submitted ${formatDate(p.submittedAt)}`
+                  : "Saved as a draft — not submitted yet."}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <ProfileBlock title="Personal" data={p.personal} />
+                <ProfileBlock title="Emergency contact" data={p.emergencyContact} />
+                <ProfileBlock title="Bank details" data={p.bank} mask />
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">The employee hasn&apos;t submitted their information form yet.</p>

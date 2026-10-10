@@ -12,9 +12,16 @@ import type { OnboardingStatus, StepStatus, UserRole } from "@/types";
 export const metadata = { title: "Employee" };
 export const dynamic = "force-dynamic";
 
-export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EmployeeDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   await requireCapability("employees");
   const { id } = await params;
+  const { tab } = await searchParams;
   await dbConnect();
 
   const employee = await Employee.findById(id)
@@ -166,5 +173,5 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     role: m.role as UserRole,
   }));
 
-  return <EmployeeDetailView detail={plain(detail)} managers={plain(managerOptions)} />;
+  return <EmployeeDetailView detail={plain(detail)} managers={plain(managerOptions)} initialTab={tab} />;
 }

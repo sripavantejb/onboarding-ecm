@@ -19,7 +19,7 @@ import { formatDate, cn } from "@/lib/utils";
 import { SECTION_LABELS, type StepSection, type StepStatus, type DocStatus } from "@/types";
 import {
   completeContentStep, acknowledgePolicy, completeTraining, submitAssessment,
-  submitInfoForm, completeOnboarding,
+  saveInfoDraft, submitInfoForm, completeOnboarding,
 } from "@/actions/portal";
 
 export interface StepViewData {
@@ -404,12 +404,17 @@ function DocumentTask({ data, onDone }: { data: StepViewData; onDone: () => void
 
 /* ------------------------------- Info form ------------------------------- */
 
-function InfoFormTask({ data, onDone }: { data: StepViewData; onDone: () => void }) {
-  const [pending, start] = React.useTransition();
-  const p = (data.profile as {
+type InfoFormState = {
+  personal: Record<string, string>;
+  emergencyContact: Record<string, string>;
+  bank: Record<string, string>;
+};
+
+function profileToForm(profile: Record<string, unknown>): InfoFormState {
+  const p = profile as {
     personal?: Record<string, string>; emergencyContact?: Record<string, string>; bank?: Record<string, string>;
-  }) ?? {};
-  const [form, setForm] = React.useState(() => ({
+  };
+  return {
     personal: {
       dateOfBirth: p.personal?.dateOfBirth ?? "", gender: p.personal?.gender ?? "",
       addressLine: p.personal?.addressLine ?? "", city: p.personal?.city ?? "",
@@ -424,17 +429,54 @@ function InfoFormTask({ data, onDone }: { data: StepViewData; onDone: () => void
       accountHolder: p.bank?.accountHolder ?? "", bankName: p.bank?.bankName ?? "",
       accountNumber: p.bank?.accountNumber ?? "", ifsc: p.bank?.ifsc ?? "", branch: p.bank?.branch ?? "",
     },
-  }));
+  };
+}
+
+function InfoFormTask({ data, onDone }: { data: StepViewData; onDone: () => void }) {
+  const router = useRouter();
+  const [pending, start] = React.useTransition();
+  const storageKey = `editco-profile-draft:${data.stepId}`;
+  const [form, setForm] = React.useState(() => profileToForm(data.profile));
+  const submitted = Boolean((data.profile as { submittedAt?: string }).submittedAt);
+  const [draftKept, setDraftKept] = React.useState(
+    !submitted && Boolean((data.profile as { draftSavedAt?: string }).draftSavedAt),
+  );
   const e = data.employment;
 
+  // Restore anything typed on this device if they left before saving.
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as InfoFormState;
+      if (parsed?.personal && parsed?.emergencyContact && parsed?.bank) setForm(parsed);
+    } catch { /* ignore a bad local draft */ }
+  }, [storageKey]);
+
   function setField(section: "personal" | "emergencyContact" | "bank", key: string, value: string) {
-    setForm((prev) => ({ ...prev, [section]: { ...prev[section], [key]: value } }));
+    setForm((prev) => {
+      const next = { ...prev, [section]: { ...prev[section], [key]: value } };
+      try { sessionStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* private mode */ }
+      return next;
+    });
+  }
+
+  function saveDraft() {
+    start(async () => {
+      const res = await saveInfoDraft(data.token, data.stepId, form);
+      if (res.ok) { setDraftKept(true); toast.success(res.message); router.refresh(); }
+      else toast.error(res.error);
+    });
   }
 
   function submit() {
     start(async () => {
       const res = await submitInfoForm(data.token, data.stepId, form);
-      if (res.ok) { toast.success(res.message); onDone(); } else toast.error(res.error);
+      if (res.ok) {
+        try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
+        toast.success(res.message);
+        onDone();
+      } else toast.error(res.error);
     });
   }
 
@@ -485,7 +527,13 @@ function InfoFormTask({ data, onDone }: { data: StepViewData; onDone: () => void
         </div>
       </Section>
 
-      <div className="flex justify-end">
+      <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center">
+        {!submitted && draftKept && (
+          <p className="text-xs text-muted-foreground sm:mr-auto">Draft saved — you can leave and come back.</p>
+        )}
+        <Button variant="outline" disabled={pending} onClick={saveDraft}>
+          {pending ? <Loader2 className="animate-spin" /> : null} Save draft
+        </Button>
         <Button variant="brand" disabled={pending} onClick={submit}>
           {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />} Submit information
         </Button>

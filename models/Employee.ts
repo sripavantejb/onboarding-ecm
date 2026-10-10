@@ -27,6 +27,7 @@ export interface IEmployeeProfile {
     branch?: string;
   };
   submittedAt?: Date | null;
+  draftSavedAt?: Date | null;
 }
 
 export interface IEmployee {

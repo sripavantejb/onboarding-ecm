@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { requireCapability } from "@/lib/authz";
 import { dbConnect } from "@/lib/db";
-import { Employee, Department } from "@/models";
+import { Employee, Department, HireDraft } from "@/models";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { OnboardingStatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { EmployeesToolbar } from "@/components/admin/employees-toolbar";
 import { formatDate, timeAgo, plain } from "@/lib/utils";
@@ -32,15 +33,27 @@ export default async function EmployeesPage({
   const departmentFilter = (sp.department as string) ?? "all";
   const statusFilter = (sp.status as string) ?? "all";
   const sort = (sp.sort as string) ?? "recent";
-  const view = (sp.view as string) === "past" ? "past" : "active";
+  const rawView = sp.view as string;
+  const view = rawView === "past" ? "past" : rawView === "drafts" ? "drafts" : "active";
   const page = Math.max(1, parseInt((sp.page as string) ?? "1", 10) || 1);
 
-  const [activeCount, pastCount] = await Promise.all([
+  const [activeCount, pastCount, draftCount] = await Promise.all([
     Employee.countDocuments({ status: "active" }),
     Employee.countDocuments({ status: "past" }),
+    HireDraft.countDocuments(),
   ]);
 
-  const query: Record<string, unknown> = { status: view };
+  const hireDrafts = view === "drafts"
+    ? await HireDraft.find(q
+        ? { $or: [{ fullName: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") }] }
+        : {})
+        .populate<{ department: { name: string } | null }>("department", "name")
+        .populate<{ role: { title: string } | null }>("role", "title")
+        .sort({ updatedAt: -1 })
+        .lean()
+    : [];
+
+  const query: Record<string, unknown> = { status: view === "drafts" ? "active" : view };
   if (departmentFilter !== "all") query.department = departmentFilter;
   if (q) {
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -137,11 +150,61 @@ export default async function EmployeesPage({
         >
           Past employees <span className="ml-1 text-xs text-muted-foreground tabular-nums">{pastCount}</span>
         </Link>
+        <Link
+          href="/employees?view=drafts"
+          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${view === "drafts" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Drafts <span className="ml-1 text-xs text-muted-foreground tabular-nums">{draftCount}</span>
+        </Link>
       </div>
 
       <EmployeesToolbar departments={plain(departments.map((d) => ({ _id: String(d._id), name: d.name })))} />
 
-      {total === 0 ? (
+      {view === "drafts" ? (
+        hireDrafts.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No drafts"
+            description="Save a new hire as a draft to finish their details later. Onboarding is generated only when you confirm."
+            action={<Button asChild variant="brand"><Link href="/employees/new"><Plus /> New employee</Link></Button>}
+          />
+        ) : (
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Draft</TableHead>
+                  <TableHead className="hidden md:table-cell">Department</TableHead>
+                  <TableHead className="hidden lg:table-cell">Role</TableHead>
+                  <TableHead className="hidden lg:table-cell">Joining</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden xl:table-cell">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hireDrafts.map((d) => (
+                  <TableRow key={String(d._id)}>
+                    <TableCell>
+                      <Link href={`/employees/new?draft=${d._id}`} className="flex items-center gap-3">
+                        <UserAvatar name={d.fullName || d.email || "Draft"} className="h-9 w-9" />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{d.fullName || "Unnamed draft"}</p>
+                          <p className="truncate text-xs text-muted-foreground">{d.email || "No email yet"}</p>
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{d.department?.name ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{d.role?.title ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{d.joiningDate ? formatDate(d.joiningDate) : "—"}</TableCell>
+                    <TableCell><Badge variant="brand">Draft</Badge></TableCell>
+                    <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">{timeAgo(d.updatedAt)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )
+      ) : total === 0 ? (
         <EmptyState
           icon={Users}
           title={view === "past" ? "No past employees" : "No employees found"}

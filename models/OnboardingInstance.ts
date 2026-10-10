@@ -17,6 +17,8 @@ export interface IOnboardingInstance {
   startedAt?: Date | null;
   firstOpenedAt?: Date | null;
   invitationSentAt?: Date | null;
+  /** Last time we emailed about required steps sitting unfinished. */
+  lastStallReminderAt?: Date | null;
   completedAt?: Date | null;
   finalChecklist: { label: string; checked: boolean }[];
   createdAt: Date;
@@ -46,6 +48,7 @@ const OnboardingInstanceSchema = new Schema<IOnboardingInstance>(
     startedAt: { type: Date, default: null },
     firstOpenedAt: { type: Date, default: null },
     invitationSentAt: { type: Date, default: null },
+    lastStallReminderAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     finalChecklist: {
       type: [{ label: String, checked: { type: Boolean, default: false } }],

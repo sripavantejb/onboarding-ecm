@@ -364,6 +364,505 @@ export const SALES_CONTENT: SeedContent[] = [
   },
 ];
 
+export const TECH_CONTENT: SeedContent[] = [
+  {
+    key: "tech-your-role",
+    title: "Your Role — Technology",
+    category: "Technology",
+    summary: "What full-time developers and technology interns own, and what success looks like.",
+    body: `<h1>Your Role</h1>
+<p>As part of Technology, you help Editco design, build and support working systems — websites, AI calling agents, workflow automations and CRM.</p>
+<h2>Full-time developers own</h2>
+<ul>
+  <li>Understanding the business problem before writing code</li>
+  <li>Building a working system, not a mockup</li>
+  <li>Reviewing the work before calling it done</li>
+  <li>Handing over cleanly and supporting what shipped</li>
+  <li>Protecting client data and credentials</li>
+</ul>
+<h2>Technology interns own</h2>
+<ul>
+  <li>Learning the guidelines and the way we build</li>
+  <li>Pairing with a developer on real work</li>
+  <li>Shipping small, clearly scoped tasks with review</li>
+  <li>Asking early when something is unclear</li>
+</ul>
+<h2>What success looks like</h2>
+<p>Working software, clear updates, and client data that stays protected.</p>`,
+  },
+  {
+    key: "tech-handbook",
+    title: "Engineering Handbook",
+    category: "Technology",
+    summary: "The day-to-day reference for building at Editco.",
+    body: `<h1>Engineering Handbook</h1>
+<p>This handbook is your reference for day-to-day engineering at Editco.</p>
+<h2>Day-to-Day Work</h2>
+<p>Plan your day around the work that is assigned: what you will build, what is in review, and what is blocked.</p>
+<h2>Daily Work System</h2>
+<ol>
+  <li>Pick up the work assigned to you</li>
+  <li>Build against the agreed scope</li>
+  <li>Update your status as you go</li>
+  <li>Ask early when you are stuck or unsure</li>
+  <li>Hand off a clear note before you log off</li>
+</ol>
+<h2>Reporting Structure</h2>
+<p>You report to the manager set on your profile. Share updates honestly and on time.</p>
+<h2>Performance</h2>
+<p>We measure reliable delivery, quality of the build, and clear communication — not hours spent looking busy.</p>
+<h2>Probation and internship</h2>
+<p>Your first months focus on learning how we build and forming clean habits. Interns are expected to complete scoped tasks with review. Full-time developers are expected to take a slice of work through to handover.</p>`,
+  },
+  {
+    key: "tech-how-we-build",
+    title: "How We Build",
+    category: "Technology",
+    summary: "The step-by-step Editco delivery flow.",
+    body: `<h1>How We Build</h1>
+<p>Every piece of work moves through the same clear stages:</p>
+<ol>
+  <li><strong>Understand</strong> — learn the business and the problem</li>
+  <li><strong>Confirm scope</strong> — agree what is in and what is out</li>
+  <li><strong>Design</strong> — decide how the system should work</li>
+  <li><strong>Build</strong> — ship a working system, not a mockup</li>
+  <li><strong>Review</strong> — check it before calling it done</li>
+  <li><strong>Launch</strong> — put it in front of the client</li>
+  <li><strong>Handover and support</strong> — pass it on cleanly and stay available for fixes</li>
+</ol>
+<p>We build websites, AI calling agents, workflow automations and CRM &amp; lead systems. The flow is the same for each.</p>
+<blockquote>Never skip <em>Confirm scope</em>. If it was not agreed, it is not part of the build.</blockquote>`,
+  },
+  {
+    key: "tech-guidelines",
+    title: "Engineering Guidelines",
+    category: "Technology",
+    summary: "The rules every developer and technology intern must follow.",
+    body: `<h1>Engineering Guidelines</h1>
+<p>Read these carefully. They apply to full-time developers and technology interns.</p>
+<ul>
+  <li><strong>Ship working builds.</strong> We deliver systems that run, not prototype promises.</li>
+  <li><strong>No credentials in chat or repos.</strong> Passwords, keys and tokens stay in approved secret storage.</li>
+  <li><strong>Never share client data</strong> outside the people who need it for the work.</li>
+  <li><strong>Review before you call it done.</strong> Check the build, then ask for review.</li>
+  <li><strong>Write what you changed.</strong> A short note so the next person can follow the work.</li>
+  <li><strong>Do not guess on scope or timelines.</strong> Confirm with your manager before you promise a date or a feature.</li>
+</ul>
+<blockquote>If a guideline and a shortcut disagree, follow the guideline and tell your manager.</blockquote>`,
+  },
+  {
+    key: "tech-tools-access",
+    title: "Tools, Access & Environments",
+    category: "Technology",
+    summary: "How to get access and keep environments separate.",
+    body: `<h1>Tools, Access &amp; Environments</h1>
+<ul>
+  <li>Ask for the access you need on day one. Do not borrow someone else's login.</li>
+  <li>Use only approved accounts and tools.</li>
+  <li>Keep local and development work separate from client production.</li>
+  <li>Do not point a test at live client data unless your manager has approved it.</li>
+  <li>If you suspect a leak, a shared password, or a key in the wrong place, report it immediately.</li>
+</ul>`,
+  },
+  {
+    key: "tech-client-communication",
+    title: "Working With Clients & the Team",
+    category: "Technology",
+    summary: "How engineers communicate with clients, design and operations.",
+    body: `<h1>Working With Clients &amp; the Team</h1>
+<ul>
+  <li>Confirm with your manager before promising a date or a feature</li>
+  <li>Keep client messages professional, clear and honest</li>
+  <li>Loop in design and operations early when the work needs them</li>
+  <li>Write down decisions so the team is not relying on memory</li>
+</ul>
+<h2>When You Don't Know the Answer</h2>
+<p>Say you will confirm and get back to them. Then check with your manager and follow up quickly. Never guess on scope, pricing or a delivery date.</p>`,
+  },
+  {
+    key: "tech-reporting",
+    title: "Status & Reporting",
+    category: "Technology",
+    summary: "What to report and how often.",
+    body: `<h1>Status &amp; Reporting</h1>
+<p>Reporting keeps the build visible and helps you get unblocked.</p>
+<ul>
+  <li>Daily: what moved, and what is blocked</li>
+  <li>Weekly: review progress with your manager</li>
+  <li>Same day: raise a blocker as soon as you hit it</li>
+</ul>`,
+  },
+  {
+    key: "tech-what-good-looks-like",
+    title: "What Good Looks Like",
+    category: "Technology",
+    summary: "How we judge engineering work for full-time and intern roles.",
+    body: `<h1>What Good Looks Like</h1>
+<table>
+  <thead><tr><th>Signal</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Reliability</td><td>Work lands when it was agreed, or the delay is raised early</td></tr>
+    <tr><td>Quality</td><td>The build works and has been reviewed</td></tr>
+    <tr><td>Clarity</td><td>Updates say what changed and what is blocked</td></tr>
+    <tr><td>Ownership</td><td>The work is carried through handover, not dropped at "it runs on my machine"</td></tr>
+  </tbody>
+</table>
+<h2>Interns</h2>
+<p>You are measured on learning and on completing scoped tasks with review.</p>
+<h2>Full-time</h2>
+<p>You are measured on end-to-end ownership: from understanding the problem through handover and support.</p>`,
+  },
+  {
+    key: "tech-first-30-days",
+    title: "First 30 Days",
+    category: "Technology",
+    summary: "What to focus on in your first month, for interns and full-time.",
+    body: `<h1>First 30 Days</h1>
+<h2>Week 1</h2>
+<p>Complete onboarding. Read the engineering guidelines. Get the access you need.</p>
+<h2>Week 2</h2>
+<p>Shadow a live build. Learn how scope, review and handover actually happen.</p>
+<h2>Week 3</h2>
+<p>Ship a small, scoped piece of work and take it through review.</p>
+<h2>Week 4</h2>
+<p>Full-time: own a slice of a build through handover. Intern: complete a supervised task and be ready to explain what you learned. Both paths prepare for the 30-day review.</p>`,
+  },
+  {
+    key: "tech-escalation",
+    title: "Escalation",
+    category: "Technology",
+    summary: "When and how to raise a problem.",
+    body: `<h1>Escalation</h1>
+<p>Tell your manager immediately when:</p>
+<ul>
+  <li>The requirements are unclear</li>
+  <li>A client system is broken</li>
+  <li>You suspect a security problem, including a leaked credential</li>
+  <li>A task is blocked and you cannot move it today</li>
+</ul>
+<p>Early escalation is a strength. Waiting until the deadline is not.</p>`,
+  },
+];
+
+export const DESIGN_CONTENT: SeedContent[] = [
+  {
+    key: "design-your-role",
+    title: "Your Role — Design",
+    category: "Design",
+    summary: "What a designer owns at Editco and what success looks like.",
+    body: `<h1>Your Role</h1>
+<p>As part of Design, you shape how Editco and our clients look and feel — websites, brand identity, campaign visuals and product screens.</p>
+<h2>What you own</h2>
+<ul>
+  <li>Understanding the brand and the brief before you open a file</li>
+  <li>Designing work that can actually be built</li>
+  <li>Reviewing with the team before you call it done</li>
+  <li>Handing off files a developer or client can use</li>
+  <li>Protecting client brand assets and unreleased work</li>
+</ul>
+<h2>What success looks like</h2>
+<p>Clear visuals, files that match the agreed brief, and handoffs that do not need to be guessed.</p>`,
+  },
+  {
+    key: "design-handbook",
+    title: "Design Handbook",
+    category: "Design",
+    summary: "The day-to-day reference for designing at Editco.",
+    body: `<h1>Design Handbook</h1>
+<p>This handbook is your reference for day-to-day design at Editco.</p>
+<h2>Daily work</h2>
+<ol>
+  <li>Check the brief and the feedback waiting on you</li>
+  <li>Design against what was agreed</li>
+  <li>Share progress before the file is "finished"</li>
+  <li>Ask early when the direction is unclear</li>
+  <li>Leave the file named and organised before you log off</li>
+</ol>
+<h2>Reporting</h2>
+<p>You report to the manager set on your profile. Share updates honestly and on time.</p>
+<h2>First months</h2>
+<p>Your first months are for learning Editco's visual standard and forming a clean review habit. Do not invent a new brand system for a client unless the brief asks for one.</p>`,
+  },
+  {
+    key: "design-how-we-design",
+    title: "How We Design",
+    category: "Design",
+    summary: "The step-by-step Editco design flow.",
+    body: `<h1>How We Design</h1>
+<p>Every design job moves through the same stages:</p>
+<ol>
+  <li><strong>Understand</strong> — learn the brand, the audience and the job</li>
+  <li><strong>Confirm the brief</strong> — agree what is in and what is out</li>
+  <li><strong>Explore</strong> — try directions before polishing one</li>
+  <li><strong>Design</strong> — produce the working screens or assets</li>
+  <li><strong>Review</strong> — check it with your manager before the client sees it</li>
+  <li><strong>Handoff</strong> — pass files, sizes and notes to build or to the client</li>
+  <li><strong>Support</strong> — stay available for the fixes that come after launch</li>
+</ol>
+<blockquote>Never skip <em>Confirm the brief</em>. A beautiful file for the wrong job is not done.</blockquote>`,
+  },
+  {
+    key: "design-guidelines",
+    title: "Design Guidelines",
+    category: "Design",
+    summary: "The rules every designer must follow.",
+    body: `<h1>Design Guidelines</h1>
+<ul>
+  <li><strong>Design what can be built.</strong> Screens and assets should match how Editco actually ships websites and campaigns.</li>
+  <li><strong>Stay on the brand.</strong> Use the client's colours, type and logo as given. Do not restyle them on your own.</li>
+  <li><strong>Name files clearly.</strong> A teammate should know what the file is without opening it.</li>
+  <li><strong>Do not send client work from a personal account.</strong> Use approved tools and logins.</li>
+  <li><strong>Review before you call it done.</strong> Check alignment, text, and export sizes, then ask for review.</li>
+  <li><strong>Do not guess on scope or dates.</strong> Confirm with your manager before you promise a new page, a new concept, or a delivery day.</li>
+</ul>`,
+  },
+  {
+    key: "design-tools-handoff",
+    title: "Tools, Files & Handoff",
+    category: "Design",
+    summary: "How to get access and hand work to the rest of the team.",
+    body: `<h1>Tools, Files &amp; Handoff</h1>
+<ul>
+  <li>Ask for tool access on day one. Do not borrow someone else's login.</li>
+  <li>Keep source files and exports separate. Do not overwrite the only copy.</li>
+  <li>Export the sizes the brief asked for, and label them.</li>
+  <li>When you hand off to technology, include what changed and anything that is still open.</li>
+  <li>Client logos, photos and unreleased campaigns stay inside Editco until your manager says otherwise.</li>
+</ul>`,
+  },
+  {
+    key: "design-working-together",
+    title: "Working With Clients & the Team",
+    category: "Design",
+    summary: "How designers communicate with clients, technology and marketing.",
+    body: `<h1>Working With Clients &amp; the Team</h1>
+<ul>
+  <li>Confirm with your manager before promising a concept count, a page, or a date</li>
+  <li>Keep client messages clear and professional</li>
+  <li>Loop in technology when a design has to be built, and marketing when it is for a campaign</li>
+  <li>Write down the decision so the next version is not based on memory</li>
+</ul>
+<p>If you do not know the answer, say you will confirm and get back to them. Then check with your manager.</p>`,
+  },
+  {
+    key: "design-reporting",
+    title: "Status & Reporting",
+    category: "Design",
+    summary: "What to report and how often.",
+    body: `<h1>Status &amp; Reporting</h1>
+<ul>
+  <li>Daily: what moved, and what is blocked</li>
+  <li>Weekly: review the work in progress with your manager</li>
+  <li>Same day: raise a blocker, missing asset, or unclear brief as soon as you hit it</li>
+</ul>`,
+  },
+  {
+    key: "design-what-good-looks-like",
+    title: "What Good Looks Like",
+    category: "Design",
+    summary: "How we judge design work.",
+    body: `<h1>What Good Looks Like</h1>
+<table>
+  <thead><tr><th>Signal</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Fit</td><td>The work matches the brief and the brand</td></tr>
+    <tr><td>Craft</td><td>Type, spacing and exports are checked</td></tr>
+    <tr><td>Clarity</td><td>Updates say what changed and what feedback is open</td></tr>
+    <tr><td>Handoff</td><td>The next person can build or publish without guessing</td></tr>
+  </tbody>
+</table>`,
+  },
+  {
+    key: "design-first-30-days",
+    title: "First 30 Days",
+    category: "Design",
+    summary: "What to focus on in your first month.",
+    body: `<h1>First 30 Days</h1>
+<h2>Week 1</h2>
+<p>Complete onboarding. Read the design guidelines. Get access to the tools and recent client work.</p>
+<h2>Week 2</h2>
+<p>Shadow a live job from brief to handoff.</p>
+<h2>Week 3</h2>
+<p>Take a small, scoped piece — a section, a social size, or a screen — through review.</p>
+<h2>Week 4</h2>
+<p>Own a slice of a job through handoff and prepare for your 30-day review.</p>`,
+  },
+  {
+    key: "design-escalation",
+    title: "Escalation",
+    category: "Design",
+    summary: "When and how to raise a problem.",
+    body: `<h1>Escalation</h1>
+<p>Tell your manager immediately when:</p>
+<ul>
+  <li>The brief is unclear or keeps changing</li>
+  <li>Brand assets or copy you need are missing</li>
+  <li>A client is unhappy with a direction</li>
+  <li>A file or login may have been shared with the wrong person</li>
+</ul>
+<p>Early escalation is a strength. Waiting until the presentation is not.</p>`,
+  },
+];
+
+export const MARKETING_CONTENT: SeedContent[] = [
+  {
+    key: "marketing-your-role",
+    title: "Your Role — Marketing",
+    category: "Marketing",
+    summary: "What a marketing hire owns at Editco and what success looks like.",
+    body: `<h1>Your Role</h1>
+<p>As part of Marketing, you help Editco and our clients turn attention into pipeline — campaigns, content, SEO and the story around websites, AI calling agents and growth systems.</p>
+<h2>What you own</h2>
+<ul>
+  <li>Understanding the audience and the goal before you publish</li>
+  <li>Planning work that sales and design can actually run</li>
+  <li>Keeping claims honest — we do not promise results we have not agreed</li>
+  <li>Reporting what ran and what it did</li>
+  <li>Protecting unreleased campaigns and client data</li>
+</ul>
+<h2>What success looks like</h2>
+<p>Clear plans, published work that matches the brief, and numbers you can explain.</p>`,
+  },
+  {
+    key: "marketing-handbook",
+    title: "Marketing Handbook",
+    category: "Marketing",
+    summary: "The day-to-day reference for marketing at Editco.",
+    body: `<h1>Marketing Handbook</h1>
+<p>This handbook is your reference for day-to-day marketing at Editco.</p>
+<h2>Daily work</h2>
+<ol>
+  <li>Check what is scheduled, in review, and blocked</li>
+  <li>Move the next piece of the plan</li>
+  <li>Update the record after something publishes or a number changes</li>
+  <li>Ask early when the offer or the audience is unclear</li>
+  <li>Note tomorrow's priority before you log off</li>
+</ol>
+<h2>Reporting</h2>
+<p>You report to the manager set on your profile. Share updates honestly, including when a campaign is quiet.</p>
+<h2>First months</h2>
+<p>Your first months are for learning Editco's services and how we talk about them. Do not invent a new offer or a discount.</p>`,
+  },
+  {
+    key: "marketing-how-campaigns-move",
+    title: "How Campaigns Move",
+    category: "Marketing",
+    summary: "The step-by-step Editco marketing flow.",
+    body: `<h1>How Campaigns Move</h1>
+<p>Every campaign moves through the same stages:</p>
+<ol>
+  <li><strong>Understand</strong> — learn the audience, the offer and the goal</li>
+  <li><strong>Confirm the brief</strong> — agree channel, message and what success means</li>
+  <li><strong>Plan</strong> — set the pieces, owners and dates</li>
+  <li><strong>Create</strong> — draft the content with design when visuals are needed</li>
+  <li><strong>Review</strong> — check claims and creative with your manager before it goes live</li>
+  <li><strong>Publish</strong> — put it in front of the audience</li>
+  <li><strong>Measure</strong> — report what happened and what to change</li>
+</ol>
+<blockquote>Never skip <em>Confirm the brief</em>. A post without an agreed goal is not a campaign.</blockquote>`,
+  },
+  {
+    key: "marketing-guidelines",
+    title: "Marketing Guidelines",
+    category: "Marketing",
+    summary: "The rules every marketing hire must follow.",
+    body: `<h1>Marketing Guidelines</h1>
+<ul>
+  <li><strong>Tell the truth about what we do.</strong> Websites, AI calling agents, automations, design and growth systems — no invented features.</li>
+  <li><strong>Do not publish a price, discount or guarantee</strong> unless your manager has confirmed it.</li>
+  <li><strong>Keep client names and results confidential</strong> unless we have permission to share them.</li>
+  <li><strong>Review before it goes live.</strong> Check the link, the claim and the creative.</li>
+  <li><strong>Record what you published</strong> so the team can see it later.</li>
+  <li><strong>Use approved accounts only.</strong> Do not run a client or Editco channel from a personal login.</li>
+</ul>`,
+  },
+  {
+    key: "marketing-tools-access",
+    title: "Tools, Channels & Access",
+    category: "Marketing",
+    summary: "How to get access and keep channels in the right place.",
+    body: `<h1>Tools, Channels &amp; Access</h1>
+<ul>
+  <li>Ask for access on day one. Do not share or borrow passwords.</li>
+  <li>Keep draft work separate from live posts and ads.</li>
+  <li>Do not point a test at a live client audience unless your manager has approved it.</li>
+  <li>If a login, pixel or unpublished post may have leaked, report it the same day.</li>
+</ul>`,
+  },
+  {
+    key: "marketing-working-together",
+    title: "Working With Clients & the Team",
+    category: "Marketing",
+    summary: "How marketing works with sales, design and clients.",
+    body: `<h1>Working With Clients &amp; the Team</h1>
+<ul>
+  <li>Confirm with your manager before promising a channel, a budget or a date</li>
+  <li>Loop in design for visuals and sales when a campaign should create conversations</li>
+  <li>Keep client messages professional and specific</li>
+  <li>Write down what was approved so the live version matches it</li>
+</ul>
+<p>If you do not know the answer, say you will confirm and follow up. Never guess on pricing or results.</p>`,
+  },
+  {
+    key: "marketing-reporting",
+    title: "Status & Reporting",
+    category: "Marketing",
+    summary: "What to report and how often.",
+    body: `<h1>Status &amp; Reporting</h1>
+<ul>
+  <li>Daily: what moved, and what is blocked</li>
+  <li>Weekly: what was published and what the numbers show, in plain language</li>
+  <li>Same day: raise a blocker, a rejected ad, or a wrong claim as soon as you see it</li>
+</ul>`,
+  },
+  {
+    key: "marketing-what-good-looks-like",
+    title: "What Good Looks Like",
+    category: "Marketing",
+    summary: "How we judge marketing work.",
+    body: `<h1>What Good Looks Like</h1>
+<table>
+  <thead><tr><th>Signal</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Fit</td><td>The work matches the audience and the agreed offer</td></tr>
+    <tr><td>Honesty</td><td>Claims, prices and client names were approved</td></tr>
+    <tr><td>Rhythm</td><td>Work publishes when it was planned, or the delay is raised early</td></tr>
+    <tr><td>Learning</td><td>You can say what happened and what to change next</td></tr>
+  </tbody>
+</table>`,
+  },
+  {
+    key: "marketing-first-30-days",
+    title: "First 30 Days",
+    category: "Marketing",
+    summary: "What to focus on in your first month.",
+    body: `<h1>First 30 Days</h1>
+<h2>Week 1</h2>
+<p>Complete onboarding. Read the marketing guidelines. Get access to the channels and recent campaigns.</p>
+<h2>Week 2</h2>
+<p>Shadow a live campaign from brief to the numbers.</p>
+<h2>Week 3</h2>
+<p>Draft a small, scoped piece and take it through review before it publishes.</p>
+<h2>Week 4</h2>
+<p>Own a slice of a plan through publish and measurement, and prepare for your 30-day review.</p>`,
+  },
+  {
+    key: "marketing-escalation",
+    title: "Escalation",
+    category: "Marketing",
+    summary: "When and how to raise a problem.",
+    body: `<h1>Escalation</h1>
+<p>Tell your manager immediately when:</p>
+<ul>
+  <li>The offer, audience or claim is unclear</li>
+  <li>Something incorrect may already be live</li>
+  <li>A client is unhappy with a campaign</li>
+  <li>An account, budget or unpublished asset may have been exposed</li>
+</ul>
+<p>Early escalation is a strength. Taking a live mistake down late is not a plan.</p>`,
+  },
+];
+
 export interface SeedPolicy {
   key: string;
   title: string;
@@ -519,6 +1018,63 @@ export const TRAINING: SeedTraining[] = [
 <p>Master the Editco sales flow: Find → Record → Connect → Understand → Qualify → Present → Coordinate → Proposal → Follow Up → Close → Handover.</p>
 <p>Complete this module before taking the Sales Fundamentals assessment.</p>`,
   },
+  {
+    key: "training-tech-fundamentals",
+    title: "Technology Fundamentals",
+    description: "The Editco build flow and engineering guidelines.",
+    category: "Technology",
+    contentType: "text",
+    estimatedMinutes: 25,
+    body: `<h1>Technology Fundamentals</h1>
+<p>Master the Editco build flow: Understand → Confirm scope → Design → Build → Review → Launch → Handover and support.</p>
+<p>Before you take the assessment, confirm you will follow these guidelines:</p>
+<ul>
+  <li>Ship working builds, not mockups</li>
+  <li>Keep credentials out of chat and repos</li>
+  <li>Never share client data outside the people who need it</li>
+  <li>Review the work before calling it done</li>
+  <li>Write what you changed</li>
+  <li>Confirm scope and timelines with your manager before you promise them</li>
+  <li>Raise blockers, broken client systems and security concerns the same day</li>
+</ul>
+<p>Complete this module before taking the Technology Fundamentals assessment.</p>`,
+  },
+  {
+    key: "training-design-fundamentals",
+    title: "Design Fundamentals",
+    description: "The Editco design flow and guidelines.",
+    category: "Design",
+    contentType: "text",
+    estimatedMinutes: 20,
+    body: `<h1>Design Fundamentals</h1>
+<p>Master the Editco design flow: Understand → Confirm the brief → Explore → Design → Review → Handoff → Support.</p>
+<ul>
+  <li>Design what can be built, on the client's brand</li>
+  <li>Name files so the next person can find them</li>
+  <li>Review before you call it done</li>
+  <li>Confirm scope and dates with your manager before you promise them</li>
+  <li>Keep client assets inside approved tools</li>
+</ul>
+<p>Complete this module before taking the Design Fundamentals assessment.</p>`,
+  },
+  {
+    key: "training-marketing-fundamentals",
+    title: "Marketing Fundamentals",
+    description: "The Editco campaign flow and guidelines.",
+    category: "Marketing",
+    contentType: "text",
+    estimatedMinutes: 20,
+    body: `<h1>Marketing Fundamentals</h1>
+<p>Master how campaigns move: Understand → Confirm the brief → Plan → Create → Review → Publish → Measure.</p>
+<ul>
+  <li>Do not invent offers, prices or guarantees</li>
+  <li>Do not publish a client name or result without permission</li>
+  <li>Review claims and creative before anything goes live</li>
+  <li>Use approved accounts only</li>
+  <li>Raise a live mistake or a leaked login the same day</li>
+</ul>
+<p>Complete this module before taking the Marketing Fundamentals assessment.</p>`,
+  },
 ];
 
 export interface SeedAssessmentQuestion {
@@ -635,6 +1191,156 @@ export const ASSESSMENTS: SeedAssessment[] = [
       {
         type: "truefalse",
         prompt: "Escalating a blocked deal early is a strength.",
+        options: ["True", "False"],
+        correctIndex: 0,
+        points: 1,
+      },
+    ],
+  },
+  {
+    key: "assessment-tech-fundamentals",
+    title: "Technology Fundamentals",
+    description: "Confirms you've understood the Editco build flow and engineering guidelines.",
+    category: "Technology",
+    passingScore: 70,
+    maxAttempts: 3,
+    questions: [
+      {
+        type: "mcq",
+        prompt: "What is the correct first step of How We Build?",
+        options: ["Launch", "Understand", "Review", "Handover"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "Credentials may be pasted into chat or committed to a repo if the team needs them quickly.",
+        options: ["True", "False"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "A client asks for a delivery date you are not sure about. You should:",
+        options: [
+          "Guess a date so they feel confident",
+          "Promise the fastest possible timeline",
+          "Confirm with your manager and follow up",
+          "Ignore the question",
+        ],
+        correctIndex: 2,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "What comes immediately after Build?",
+        options: ["Understand", "Review", "Confirm scope", "Design"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "A blocked task, a broken client system, or a suspected security issue should be raised with your manager the same day.",
+        options: ["True", "False"],
+        correctIndex: 0,
+        points: 1,
+      },
+    ],
+  },
+  {
+    key: "assessment-design-fundamentals",
+    title: "Design Fundamentals",
+    description: "Confirms you've understood the Editco design flow and guidelines.",
+    category: "Design",
+    passingScore: 70,
+    maxAttempts: 3,
+    questions: [
+      {
+        type: "mcq",
+        prompt: "What is the correct first step of How We Design?",
+        options: ["Handoff", "Understand", "Review", "Explore"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "You may restyle a client's logo or colours if you think the new version looks better.",
+        options: ["True", "False"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "A client asks for an extra concept and a delivery date you have not agreed. You should:",
+        options: [
+          "Promise both so the client stays happy",
+          "Ignore the request",
+          "Confirm with your manager and follow up",
+          "Send a rough version from your personal account",
+        ],
+        correctIndex: 2,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "What comes immediately after Design?",
+        options: ["Understand", "Review", "Explore", "Confirm the brief"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "An unclear brief, a missing asset, or a file shared with the wrong person should be raised with your manager the same day.",
+        options: ["True", "False"],
+        correctIndex: 0,
+        points: 1,
+      },
+    ],
+  },
+  {
+    key: "assessment-marketing-fundamentals",
+    title: "Marketing Fundamentals",
+    description: "Confirms you've understood how Editco campaigns move.",
+    category: "Marketing",
+    passingScore: 70,
+    maxAttempts: 3,
+    questions: [
+      {
+        type: "mcq",
+        prompt: "What is the correct first step of How Campaigns Move?",
+        options: ["Publish", "Understand", "Measure", "Create"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "You may publish a discount or a results guarantee if it will help the campaign perform.",
+        options: ["True", "False"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "You want to mention a client result in a post. You should:",
+        options: [
+          "Post it if the result is true",
+          "Wait until you have permission and your manager has reviewed it",
+          "Post it from a personal account",
+          "Skip review if the deadline is today",
+        ],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "mcq",
+        prompt: "What comes immediately after Publish?",
+        options: ["Plan", "Measure", "Understand", "Create"],
+        correctIndex: 1,
+        points: 1,
+      },
+      {
+        type: "truefalse",
+        prompt: "A wrong claim that is already live should be raised with your manager the same day.",
         options: ["True", "False"],
         correctIndex: 0,
         points: 1,

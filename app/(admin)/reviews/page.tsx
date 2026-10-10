@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 interface Row {
   _id: string; employeeId: string; employeeName: string; type: string; dueDate: string;
-  status: string; reviewerName: string;
+  status: string; reviewerName: string; hasDraft: boolean;
 }
 
 export default async function ReviewsPage() {
@@ -36,6 +36,8 @@ export default async function ReviewsPage() {
     dueDate: (r.dueDate as Date).toISOString(),
     status: r.status,
     reviewerName: r.reviewerName ?? "",
+    hasDraft: [r.goals, r.performance, r.strengths, r.improvements, r.feedback, r.nextObjectives, r.managerComments]
+      .some((v) => typeof v === "string" && v.trim().length > 0),
   }));
 
   const now = Date.now();
@@ -87,6 +89,7 @@ function Section({
                   <p className="text-sm font-medium">{r.employeeName}</p>
                   <p className="text-xs text-muted-foreground">
                     {r.type}-day review · due {formatDate(r.dueDate)}{r.reviewerName && ` · by ${r.reviewerName}`}
+                    {r.status !== "completed" && r.hasDraft ? " · draft saved" : ""}
                   </p>
                 </div>
               </div>
@@ -94,7 +97,7 @@ function Section({
                 <Badge variant={r.status === "completed" ? "success" : accent === "destructive" ? "destructive" : "warning"}>
                   {r.status === "completed" ? "Completed" : accent === "destructive" ? "Overdue" : "Pending"}
                 </Badge>
-                <Button asChild variant="outline" size="sm"><Link href={`/employees/${r.employeeId}`}>Open</Link></Button>
+                <Button asChild variant="outline" size="sm"><Link href={`/employees/${r.employeeId}?tab=reviews`}>Open</Link></Button>
               </div>
             </div>
           ))}

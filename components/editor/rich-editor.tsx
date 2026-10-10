@@ -25,13 +25,12 @@ export function RichEditor({
   const ref = React.useRef<HTMLDivElement>(null);
   const [focused, setFocused] = React.useState(false);
 
-  // Initialize once; contentEditable is uncontrolled afterwards.
+  // Apply saved or restored HTML when the editor is not being typed in.
   React.useEffect(() => {
-    if (ref.current && ref.current.innerHTML !== value) {
-      ref.current.innerHTML = value || "";
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const el = ref.current;
+    if (!el || document.activeElement === el) return;
+    if (el.innerHTML !== (value || "")) el.innerHTML = value || "";
+  }, [value]);
 
   function exec(command: string, arg?: string) {
     ref.current?.focus();
@@ -40,7 +39,10 @@ export function RichEditor({
   }
 
   function emit() {
-    if (ref.current) onChange(ref.current.innerHTML);
+    const el = ref.current;
+    // Ignore blur while the editor is being unmounted — that was wiping the draft.
+    if (!el || !el.isConnected) return;
+    onChange(el.innerHTML);
   }
 
   function insertHTML(html: string) {

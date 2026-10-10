@@ -27,7 +27,7 @@ export const DEPARTMENTS: SeedDept[] = [
     name: "Design",
     slug: "design",
     description: "Brand and product design.",
-    roles: [{ title: "Graphic Designer", slug: "graphic-designer" }],
+    roles: [{ title: "Graphic Designer", slug: "graphic-designer", description: "Designs brands, interfaces and campaign visuals the Editco way." }],
   },
   {
     name: "Video",
@@ -39,7 +39,7 @@ export const DEPARTMENTS: SeedDept[] = [
     name: "Marketing",
     slug: "marketing",
     description: "Campaigns, content and growth.",
-    roles: [{ title: "Marketing Executive", slug: "marketing-executive" }],
+    roles: [{ title: "Marketing Executive", slug: "marketing-executive", description: "Plans and runs campaigns that turn attention into pipeline." }],
   },
   {
     name: "Operations",
@@ -51,7 +51,10 @@ export const DEPARTMENTS: SeedDept[] = [
     name: "Technology",
     slug: "technology",
     description: "Engineering and internal systems.",
-    roles: [{ title: "Technology / Developer", slug: "technology-developer" }],
+    roles: [
+      { title: "Technology / Developer", slug: "technology-developer", description: "Builds and ships Editco systems end to end." },
+      { title: "Technology Intern", slug: "technology-intern", description: "Learns the engineering guidelines and ships scoped work with review." },
+    ],
   },
   {
     name: "HR",
@@ -74,3 +77,10 @@ export const SALES_TRACK_ROLE_SLUGS = [
   "sales-manager",
   "business-development-intern",
 ];
+
+// Roles that receive the dedicated Technology onboarding track.
+export const TECH_TRACK_ROLE_SLUGS = ["technology-developer", "technology-intern"];
+
+export const DESIGN_TRACK_ROLE_SLUGS = ["graphic-designer"];
+
+export const MARKETING_TRACK_ROLE_SLUGS = ["marketing-executive"];
